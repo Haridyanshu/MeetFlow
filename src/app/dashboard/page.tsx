@@ -1,44 +1,45 @@
-import { redirect } from "next/navigation"
-import { auth, signOut } from "@/lib/auth"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { auth } from "@/lib/auth"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default async function DashboardPage() {
+export default async function DashboardHome() {
   const session = await auth()
 
-  if (!session) {
-    redirect("/login")
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? ""} />
-              <AvatarFallback>{(session.user.name ?? "U")[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle>{session.user.name}</CardTitle>
-              <CardDescription>{session.user.email}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form
-            action={async () => {
-              "use server"
-              await signOut({ redirectTo: "/login" })
-            }}
-          >
-            <Button type="submit" variant="outline" className="w-full">
-              Sign out
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-heading font-medium">
+          Welcome back, {session?.user?.name?.split(" ")[0] ?? "there"}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Here&apos;s an overview of your meetings and activity.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            No upcoming meetings
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            No pending requests
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            No meetings yet
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
