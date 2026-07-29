@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
@@ -27,14 +27,20 @@ interface EventTypeFormProps {
   mode: "create" | "edit"
   defaultValues?: Partial<CreateEventTypeInput> & { id?: string }
   children?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function EventTypeForm({
   mode,
   defaultValues,
   children,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: EventTypeFormProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
   const [isPending, startTransition] = useTransition()
 
   const {
@@ -94,19 +100,29 @@ export function EventTypeForm({
         title: mode === "create" ? "Event type created" : "Event type updated",
         type: "success",
       })
-      setOpen(false)
+      handleOpenChange(false)
       reset()
     })
   }
 
   function handleOpenChange(open: boolean) {
-    setOpen(open)
+    if (isControlled) {
+      controlledOnOpenChange!(open)
+    } else {
+      setInternalOpen(open)
+    }
     if (!open) reset()
   }
 
+  useEffect(() => {
+    if (open && isControlled) {
+      reset()
+    }
+  }, [open, isControlled, reset])
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {children && (
+      {children && !isControlled && (
         <DialogTrigger render={children as React.ReactElement} />
       )}
       <DialogContent className="sm:max-w-lg">
@@ -234,7 +250,7 @@ export function EventTypeForm({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={isPending}
             >
               Cancel

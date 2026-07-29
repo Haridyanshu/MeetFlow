@@ -14,19 +14,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 
 interface DeleteDialogProps {
   eventTypeId: string
   eventTypeTitle: string
-  children?: React.ReactNode
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function DeleteDialog({
   eventTypeId,
   eventTypeTitle,
-  children,
+  open,
+  onOpenChange,
 }: DeleteDialogProps) {
   const [isPending, startTransition] = useTransition()
 
@@ -42,8 +43,7 @@ export function DeleteDialog({
   }
 
   return (
-    <Dialog>
-      {children && <DialogTrigger render={children as React.ReactElement} />}
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete event type</DialogTitle>
