@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { Breadcrumbs } from "@/components/dashboard/breadcrumbs"
+import { Toaster } from "@/components/ui/toast"
 
 export default async function DashboardLayout({
   children,
@@ -29,6 +30,7 @@ export default async function DashboardLayout({
           </div>
         </main>
       </div>
+      <Toaster />
     </div>
   )
 }
