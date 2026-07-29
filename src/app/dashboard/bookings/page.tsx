@@ -1,6 +1,19 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { auth } from "@/lib/auth"
+import { getBookingsByUserId } from "@/lib/queries/bookings"
+import { BookingsPageClient } from "@/components/bookings/bookings-page-client"
 
-export default function BookingsPage() {
+export default async function BookingsPage() {
+  const session = await auth()
+  const bookings = await getBookingsByUserId(session!.user.id)
+
+  const now = new Date()
+  const upcoming = bookings
+    .filter((b) => b.startTime >= now)
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+  const past = bookings
+    .filter((b) => b.startTime < now)
+    .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -9,12 +22,7 @@ export default function BookingsPage() {
           View and manage your scheduled meetings.
         </p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming bookings</CardTitle>
-          <CardDescription>No bookings yet.</CardDescription>
-        </CardHeader>
-      </Card>
+      <BookingsPageClient upcoming={upcoming} past={past} />
     </div>
   )
 }

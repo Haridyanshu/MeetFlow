@@ -19,6 +19,7 @@ model User {
   accounts           Account[]
   sessions           Session[]
   eventTypes         EventType[]
+  bookings           Booking[]
   weeklyAvailability WeeklyAvailability?
   dateOverrides      DateOverride[]
 }
@@ -39,6 +40,7 @@ model EventType {
   updatedAt           DateTime @updatedAt
   userId              String
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings            Booking[]
 
   @@unique([userId, slug])
 }
@@ -111,4 +113,30 @@ model DateOverride {
 
   @@unique([userId, date])
   @@index([userId, date])
+}
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+}
+
+model Booking {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId String
+  eventType   EventType      @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  guestName   String
+  guestEmail  String
+  guestNotes  String?
+  startTime   DateTime
+  endTime     DateTime
+  timezone    String
+  status      BookingStatus  @default(BOOKED)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([eventTypeId, startTime, status])
+  @@index([userId, status])
+  @@index([startTime])
 }

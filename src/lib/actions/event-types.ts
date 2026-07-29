@@ -70,7 +70,6 @@ export async function updateEventType(id: string, formData: FormData) {
     duration: raw.duration ? Number(raw.duration) : undefined,
     bufferBefore: raw.bufferBefore ? Number(raw.bufferBefore) : undefined,
     bufferAfter: raw.bufferAfter ? Number(raw.bufferAfter) : undefined,
-    isActive: raw.isActive === "true" || raw.isActive === "on",
     requiresConfirmation: raw.requiresConfirmation === "true" || raw.requiresConfirmation === "on",
   })
 
