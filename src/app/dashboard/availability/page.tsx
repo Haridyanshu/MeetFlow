@@ -1,20 +1,26 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { auth } from "@/lib/auth"
+import { getWeeklyAvailability, getDateOverrides } from "@/lib/queries/availability"
+import { AvailabilityPageClient } from "@/components/availability/availability-page-client"
 
-export default function AvailabilityPage() {
+export default async function AvailabilityPage() {
+  const session = await auth()
+  const [weeklyAvailability, dateOverrides] = await Promise.all([
+    getWeeklyAvailability(session!.user.id),
+    getDateOverrides(session!.user.id),
+  ])
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-heading font-medium">Availability</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Set your weekly availability for meetings.
+          Set your weekly availability and manage date overrides.
         </p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Weekly schedule</CardTitle>
-          <CardDescription>Configure your available time slots.</CardDescription>
-        </CardHeader>
-      </Card>
+      <AvailabilityPageClient
+        intervals={weeklyAvailability?.intervals ?? []}
+        dateOverrides={dateOverrides}
+      />
     </div>
   )
 }

@@ -9,16 +9,18 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(cuid())
-  name          String?
-  email         String      @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  eventTypes    EventType[]
+  id                 String               @id @default(cuid())
+  name               String?
+  email              String               @unique
+  emailVerified      DateTime?
+  image              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  accounts           Account[]
+  sessions           Session[]
+  eventTypes         EventType[]
+  weeklyAvailability WeeklyAvailability?
+  dateOverrides      DateOverride[]
 }
 
 model EventType {
@@ -73,4 +75,40 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+model WeeklyAvailability {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  intervals AvailabilityInterval[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AvailabilityInterval {
+  id                   String              @id @default(cuid())
+  weeklyAvailabilityId String
+  weeklyAvailability   WeeklyAvailability  @relation(fields: [weeklyAvailabilityId], references: [id], onDelete: Cascade)
+  dayOfWeek            Int
+  startTime            String
+  endTime              String
+  isEnabled            Boolean             @default(true)
+
+  @@index([weeklyAvailabilityId, dayOfWeek])
+}
+
+model DateOverride {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime
+  isAvailable Boolean  @default(true)
+  startTime   String?
+  endTime     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
