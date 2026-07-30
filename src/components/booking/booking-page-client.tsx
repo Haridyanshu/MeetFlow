@@ -15,6 +15,9 @@ interface EventTypeData {
   description: string | null
   duration: number
   location: string | null
+  isPaid: boolean
+  price: number | null
+  currency: string | null
 }
 
 interface HostData {
@@ -107,6 +110,9 @@ export function BookingPageClient({
         {step === "form" && selectedSlot && (
           <BookingForm
             eventTypeId={eventType.id}
+            isPaid={eventType.isPaid}
+            price={eventType.price}
+            currency={eventType.currency}
             selectedSlot={selectedSlot}
             onSuccess={handleBookingSuccess}
             onBack={handleBackToSlots}

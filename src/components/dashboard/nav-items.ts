@@ -4,6 +4,7 @@ import {
   ClockIcon,
   CalendarCheckIcon,
   UsersIcon,
+  BarChart3Icon,
   PuzzleIcon,
   SettingsIcon,
 } from "lucide-react"
@@ -39,6 +40,11 @@ export const navItems: NavItem[] = [
     title: "Teams",
     href: "/dashboard/teams",
     icon: UsersIcon,
+  },
+  {
+    title: "Analytics",
+    href: "/dashboard/analytics",
+    icon: BarChart3Icon,
   },
   {
     title: "Integrations",

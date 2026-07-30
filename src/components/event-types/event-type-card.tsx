@@ -45,6 +45,9 @@ interface EventTypeCardProps {
     maximumBookingsPerWeek: number
     schedulingType: string
     teamId: string | null
+    isPaid: boolean
+    price: number | null
+    currency: string | null
   }
   teams?: { id: string; name: string }[]
 }
@@ -88,6 +91,9 @@ export function EventTypeCard({ eventType, teams }: EventTypeCardProps) {
           maximumBookingsPerWeek: eventType.maximumBookingsPerWeek,
           schedulingType: eventType.schedulingType as "INDIVIDUAL" | "ROUND_ROBIN" | "COLLECTIVE",
           teamId: eventType.teamId ?? "",
+          isPaid: eventType.isPaid,
+          price: eventType.price ?? 0,
+          currency: eventType.currency ?? "usd",
         }}
       />
       <DeleteDialog
@@ -185,6 +191,11 @@ export function EventTypeCard({ eventType, teams }: EventTypeCardProps) {
               <span className="text-xs text-muted-foreground">
                 Team: {teams.find((t) => t.id === eventType.teamId)?.name ?? eventType.teamId}
               </span>
+            )}
+            {eventType.isPaid && (
+              <Badge variant="default" className="text-[10px]">
+                {eventType.currency?.toUpperCase()} {((eventType.price ?? 0) / 100).toFixed(2)}
+              </Badge>
             )}
           </div>
         </CardContent>

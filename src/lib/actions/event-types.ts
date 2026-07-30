@@ -26,6 +26,9 @@ export async function createEventType(formData: FormData) {
     maximumBookingsPerDay: raw.maximumBookingsPerDay ? Number(raw.maximumBookingsPerDay) : undefined,
     maximumBookingsPerWeek: raw.maximumBookingsPerWeek ? Number(raw.maximumBookingsPerWeek) : undefined,
     requiresConfirmation: raw.requiresConfirmation === "true" || raw.requiresConfirmation === "on",
+    isPaid: raw.isPaid === "true",
+    price: raw.price ? Number(raw.price) : undefined,
+    currency: raw.currency || undefined,
   })
 
   if (!parsed.success) {
@@ -87,6 +90,9 @@ export async function updateEventType(id: string, formData: FormData) {
     maximumBookingsPerDay: raw.maximumBookingsPerDay ? Number(raw.maximumBookingsPerDay) : undefined,
     maximumBookingsPerWeek: raw.maximumBookingsPerWeek ? Number(raw.maximumBookingsPerWeek) : undefined,
     requiresConfirmation: raw.requiresConfirmation === "true" || raw.requiresConfirmation === "on",
+    isPaid: raw.isPaid === "true",
+    price: raw.price ? Number(raw.price) : undefined,
+    currency: raw.currency || undefined,
   })
 
   if (!parsed.success) {

@@ -28,6 +28,9 @@ interface Booking {
   status: string
   meetingUrl: string | null
   meetingProvider: string | null
+  paymentStatus: string | null
+  amountPaid: number | null
+  currency: string | null
   assignedUser?: { id: string; name: string | null; email: string } | null
   eventType: {
     id: string
@@ -95,6 +98,11 @@ function BookingCard({
               <Badge variant="outline" className="gap-1 text-xs">
                 <VideoIcon className="size-3" />
                 Google Meet
+              </Badge>
+            )}
+            {booking.paymentStatus && booking.paymentStatus !== "FREE" && (
+              <Badge variant="outline" className="gap-1 text-xs capitalize">
+                {booking.paymentStatus.toLowerCase()}
               </Badge>
             )}
             <Badge variant={isPast ? "secondary" : "success"}>

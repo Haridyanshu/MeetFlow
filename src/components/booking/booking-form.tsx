@@ -8,13 +8,18 @@ import { Loader2Icon } from "lucide-react"
 import { createBookingSchema } from "@/lib/schemas/booking"
 import type { CreateBookingInput } from "@/lib/schemas/booking"
 import { createBooking } from "@/lib/actions/bookings"
+import { createCheckoutSession } from "@/lib/actions/checkout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
+
 interface BookingFormProps {
   eventTypeId: string
+  isPaid: boolean
+  price: number | null
+  currency: string | null
   selectedSlot: { startTime: string; endTime: string }
   onSuccess: (booking: unknown) => void
   onBack: () => void
@@ -39,6 +44,9 @@ function formatDate(iso: string): string {
 
 export function BookingForm({
   eventTypeId,
+  isPaid,
+  price,
+  currency,
   selectedSlot,
   onSuccess,
   onBack,
@@ -65,6 +73,31 @@ export function BookingForm({
 
   async function onSubmit(data: CreateBookingInput) {
     startTransition(async () => {
+      if (isPaid) {
+        const result = await createCheckoutSession({
+          eventTypeId: data.eventTypeId,
+          guestName: data.guestName,
+          guestEmail: data.guestEmail,
+          guestNotes: data.guestNotes,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          timezone: data.timezone,
+        })
+
+        if (result && "errors" in result && result.errors) {
+          for (const [field, messages] of Object.entries(result.errors)) {
+            const message = Array.isArray(messages) ? messages[0] : messages
+            setError(field as keyof CreateBookingInput, { message })
+          }
+          return
+        }
+
+        if (result && "url" in result && result.url) {
+          window.location.href = result.url
+        }
+        return
+      }
+
       const result = await createBooking(data)
 
       if (result && "errors" in result && result.errors) {
@@ -132,6 +165,16 @@ export function BookingForm({
         </div>
       )}
 
+      {isPaid && price != null && (
+        <div className="rounded-lg border bg-muted/50 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Price: </span>
+          <span className="font-medium">
+            {((currency ?? "usd").toUpperCase())} {(price / 100).toFixed(2)}
+          </span>
+          <p className="text-xs text-muted-foreground mt-1">You will be redirected to Stripe to complete payment.</p>
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         <Button
           type="button"
@@ -143,7 +186,7 @@ export function BookingForm({
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending && <Loader2Icon className="animate-spin" />}
-          Confirm booking
+          {isPaid ? "Proceed to payment" : "Confirm booking"}
         </Button>
       </div>
     </form>

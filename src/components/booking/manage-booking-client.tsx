@@ -35,6 +35,9 @@ export interface BookingData {
   status: string
   meetingUrl: string | null
   meetingProvider: string | null
+  paymentStatus: string | null
+  amountPaid: number | null
+  currency: string | null
   assignedUser?: { id: string; name: string | null; email: string } | null
   eventType: {
     id: string
@@ -268,6 +271,15 @@ export function ManageBookingClient({
                       Join Meeting
                     </a>
                   </div>
+                </div>
+              )}
+              {booking.paymentStatus && booking.paymentStatus !== "FREE" && (
+                <div className="text-muted-foreground">
+                  Payment:{" "}
+                  <span className="font-medium capitalize">{booking.paymentStatus.toLowerCase()}</span>
+                  {booking.amountPaid != null && (
+                    <span> &mdash; {((booking.currency ?? "usd").toUpperCase())} {(booking.amountPaid / 100).toFixed(2)}</span>
+                  )}
                 </div>
               )}
             </div>

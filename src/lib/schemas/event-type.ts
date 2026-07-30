@@ -57,6 +57,9 @@ export const createEventTypeSchema = z.object({
     .optional(),
   schedulingType: z.enum(["INDIVIDUAL", "ROUND_ROBIN", "COLLECTIVE"]).optional(),
   teamId: z.string().optional(),
+  isPaid: z.boolean().optional(),
+  price: z.number().int().min(0).max(100000).optional(),
+  currency: z.string().max(3).optional(),
 })
 
 export const updateEventTypeSchema = createEventTypeSchema.partial().extend({

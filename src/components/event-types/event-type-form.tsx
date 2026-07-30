@@ -55,6 +55,7 @@ export function EventTypeForm({
     handleSubmit,
     reset,
     setError,
+    watch,
     formState: { errors },
   } = useForm<CreateEventTypeInput>({
     resolver: zodResolver(
@@ -76,9 +77,14 @@ export function EventTypeForm({
       maximumBookingsPerWeek: 0,
       schedulingType: "INDIVIDUAL",
       teamId: "",
+      isPaid: false,
+      price: 0,
+      currency: "usd",
       ...defaultValues,
     },
   })
+
+  const isPaid = watch("isPaid")
 
   async function onSubmit(data: CreateEventTypeInput) {
     startTransition(async () => {
@@ -344,6 +350,49 @@ export function EventTypeForm({
                 {errors.teamId && (
                   <p className="text-xs text-destructive">{errors.teamId.message}</p>
                 )}
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <Label>Pricing</Label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" value="false" {...register("isPaid")} defaultChecked={!defaultValues?.isPaid} />
+                  Free
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" value="true" {...register("isPaid")} defaultChecked={!!defaultValues?.isPaid} />
+                  Paid
+                </label>
+              </div>
+            </div>
+            {isPaid && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="price">Price (cents)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    placeholder="2000"
+                    {...register("price", { valueAsNumber: true })}
+                  />
+                  {errors.price && (
+                    <p className="text-xs text-destructive">{errors.price.message}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Input
+                    id="currency"
+                    placeholder="usd"
+                    maxLength={3}
+                    {...register("currency")}
+                  />
+                  {errors.currency && (
+                    <p className="text-xs text-destructive">{errors.currency.message}</p>
+                  )}
+                </div>
               </div>
             )}
             <label className="flex items-center gap-2 text-sm">
