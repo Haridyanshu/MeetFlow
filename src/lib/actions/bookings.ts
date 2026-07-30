@@ -9,6 +9,10 @@ import { createBookingSchema, cancelBookingSchema } from "@/lib/schemas/booking"
 import type { CreateBookingInput } from "@/lib/schemas/booking"
 import { getAvailableSlots } from "@/lib/queries/bookings"
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/services/calendar"
+import {
+  sendBookingConfirmation,
+  sendBookingCancellation,
+} from "@/lib/services/email"
 
 export async function createBooking(data: CreateBookingInput) {
   const parsed = createBookingSchema.safeParse(data)
@@ -131,6 +135,26 @@ export async function createBooking(data: CreateBookingInput) {
       console.error("Failed to create Google Calendar event:", calendarError)
     }
 
+    try {
+      await sendBookingConfirmation(
+        {
+          eventTitle: eventType.title,
+          hostName: eventType.user.name ?? eventType.user.email,
+          guestName: parsed.data.guestName,
+          guestEmail: parsed.data.guestEmail,
+          date: startTime,
+          startTime,
+          endTime,
+          timezone: parsed.data.timezone,
+          duration: eventType.duration,
+          description: eventType.description,
+        },
+        eventType.user.email,
+      )
+    } catch (emailError) {
+      console.error("Failed to send booking confirmation email:", emailError)
+    }
+
     revalidatePath("/dashboard/bookings")
     revalidatePath("/dashboard")
 
@@ -176,7 +200,7 @@ export async function cancelBooking(id: string) {
 
   const booking = await prisma.booking.findUnique({
     where: { id: parsed.data.id },
-    include: { eventType: true },
+    include: { eventType: { include: { user: true } } },
   })
 
   if (!booking || booking.eventType.userId !== session.user.id) {
@@ -207,6 +231,24 @@ export async function cancelBooking(id: string) {
         calendarError
       )
     }
+  }
+
+  try {
+    await sendBookingCancellation(
+      {
+        eventTitle: booking.eventType.title,
+        hostName: booking.eventType.user.name ?? booking.eventType.user.email,
+        guestName: booking.guestName,
+        date: booking.startTime,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        timezone: booking.timezone,
+      },
+      booking.eventType.user.email,
+      booking.guestEmail,
+    )
+  } catch (emailError) {
+    console.error("Failed to send booking cancellation email:", emailError)
   }
 
   revalidatePath("/dashboard/bookings")

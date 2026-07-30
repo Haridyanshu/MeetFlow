@@ -1,0 +1,142 @@
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  })
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  })
+}
+
+function baseHtml(content: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeetFlow</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <table role="presentation" style="width:100%;border-collapse:collapse">
+    <tr>
+      <td align="center" style="padding:40px 16px">
+        <table role="presentation" style="max-width:480px;width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:12px;overflow:hidden">
+          <tr>
+            <td style="padding:32px 32px 0">
+              <h1 style="margin:0;font-size:20px;font-weight:600;color:#1a1a2e">MeetFlow</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px 32px;line-height:1.6;color:#334155;font-size:15px">
+              ${content}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8;text-align:center">
+              <p style="margin:0">Sent via MeetFlow</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+export interface ConfirmationTemplateData {
+  eventTitle: string
+  hostName: string
+  guestName: string
+  guestEmail: string
+  date: Date
+  startTime: Date
+  endTime: Date
+  timezone: string
+  duration: number
+  description: string | null
+}
+
+export function bookingConfirmationHtml(data: ConfirmationTemplateData): string {
+  const details = [
+    { label: "Event", value: data.eventTitle },
+    { label: "Host", value: data.hostName },
+    { label: "Guest", value: `${data.guestName} (${data.guestEmail})` },
+    { label: "Date", value: formatDate(data.date) },
+    { label: "Time", value: `${formatTime(data.startTime)} \u2013 ${formatTime(data.endTime)}` },
+    { label: "Timezone", value: data.timezone },
+    { label: "Duration", value: `${data.duration} min` },
+  ]
+
+  if (data.description) {
+    details.push({ label: "Description", value: data.description })
+  }
+
+  const rows = details
+    .map(
+      (d) => `
+    <tr>
+      <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">${d.label}</td>
+      <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${d.value}</td>
+    </tr>`
+    )
+    .join("")
+
+  return baseHtml(`
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:600;color:#1a1a2e">Booking Confirmed</h2>
+    <p style="margin:0 0 20px;color:#475569">Your meeting has been scheduled.</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse">
+      ${rows}
+    </table>
+  `)
+}
+
+export interface CancellationTemplateData {
+  eventTitle: string
+  hostName: string
+  guestName: string
+  date: Date
+  startTime: Date
+  endTime: Date
+  timezone: string
+}
+
+export function bookingCancellationHtml(data: CancellationTemplateData): string {
+  return baseHtml(`
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:600;color:#dc2626">Booking Cancelled</h2>
+    <p style="margin:0 0 20px;color:#475569">
+      The following meeting has been cancelled by <strong>${data.hostName}</strong>.
+    </p>
+    <table role="presentation" style="width:100%;border-collapse:collapse">
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Event</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${data.eventTitle}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Date</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${formatDate(data.date)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Time</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${formatTime(data.startTime)} \u2013 ${formatTime(data.endTime)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Timezone</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${data.timezone}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Guest</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${data.guestName}</td>
+      </tr>
+    </table>
+  `)
+}
