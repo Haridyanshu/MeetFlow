@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { CalendarDaysIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const PRESETS = [
@@ -25,17 +26,24 @@ export function TimeFilter() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {PRESETS.map((preset) => (
-        <Button
-          key={preset.value}
-          variant={current === preset.value ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRange(preset.value)}
-        >
-          {preset.label}
-        </Button>
-      ))}
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
+      <div className="flex items-center gap-2 mr-2">
+        <CalendarDaysIcon className="size-4 text-brand" />
+        <span className="text-xs font-medium text-foreground">Period</span>
+      </div>
+      <div className="flex items-center gap-1">
+        {PRESETS.map((preset) => (
+          <Button
+            key={preset.value}
+            variant={current === preset.value ? "brand" : "ghost"}
+            size="sm"
+            onClick={() => setRange(preset.value)}
+            className={current === preset.value ? "" : "text-muted-foreground hover:text-foreground"}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
     </div>
   )
 }

@@ -24,7 +24,7 @@ export function Breadcrumbs() {
     <nav className="flex items-center gap-1 text-sm text-muted-foreground">
       <Link
         href="/dashboard"
-        className="flex items-center gap-1 hover:text-foreground"
+        className="flex items-center gap-1 transition-colors duration-150 hover:text-foreground"
       >
         <HomeIcon className="size-3.5" />
         Dashboard

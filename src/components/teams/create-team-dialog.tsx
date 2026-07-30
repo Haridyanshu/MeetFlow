@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, PlusIcon } from "lucide-react"
+import { Loader2Icon, PlusIcon, UsersIcon } from "lucide-react"
 
 import { createTeamSchema } from "@/lib/schemas/team"
 import type { CreateTeamInput } from "@/lib/schemas/team"
@@ -22,6 +22,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 100)
+}
+
 export function CreateTeamDialog() {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -30,12 +40,27 @@ export function CreateTeamDialog() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     setError,
     formState: { errors },
   } = useForm<CreateTeamInput>({
     resolver: zodResolver(createTeamSchema),
     defaultValues: { name: "", slug: "" },
   })
+
+  const watchName = watch("name")
+
+  const handleNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const name = e.target.value
+      setValue("name", name)
+      if (!errors.slug) {
+        setValue("slug", slugify(name))
+      }
+    },
+    [setValue, errors.slug],
+  )
 
   async function onSubmit(data: CreateTeamInput) {
     startTransition(async () => {
@@ -61,23 +86,45 @@ export function CreateTeamDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline"><PlusIcon />Create team</Button>} />
+      <DialogTrigger render={<Button variant="brand"><PlusIcon />Create team</Button>} />
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
+            <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand mb-1">
+              <UsersIcon className="size-5" />
+            </div>
             <DialogTitle>Create team</DialogTitle>
             <DialogDescription>Create a new team to collaborate on scheduling.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" placeholder="Engineering" {...register("name")} />
+              <Label htmlFor="name">Team name</Label>
+              <Input
+                id="name"
+                placeholder="Engineering"
+                {...register("name", { onChange: handleNameChange })}
+              />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="slug">Slug</Label>
-              <Input id="slug" placeholder="engineering" {...register("slug")} />
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none font-mono">
+                  /
+                </span>
+                <Input
+                  id="slug"
+                  placeholder="engineering"
+                  className="pl-5 font-mono text-sm"
+                  {...register("slug")}
+                />
+              </div>
               {errors.slug && <p className="text-xs text-destructive">{errors.slug.message}</p>}
+              {!errors.slug && watchName && (
+                <p className="text-[11px] text-muted-foreground">
+                  https://meetflow.com/team/{slugify(watchName) || "..."}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -86,7 +133,7 @@ export function CreateTeamDialog() {
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2Icon className="animate-spin" />}
-              Create
+              Create team
             </Button>
           </DialogFooter>
         </form>

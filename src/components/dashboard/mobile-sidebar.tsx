@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation"
 
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { navItems } from "@/components/dashboard/nav-items"
-import { buttonVariants } from "@/components/ui/button"
+import { navSections } from "@/components/dashboard/nav-items"
+import { SidebarUserNav } from "@/components/dashboard/sidebar-user-nav"
 
 export function MobileSidebar({
   open,
@@ -20,39 +20,49 @@ export function MobileSidebar({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="left-0 top-0 h-full max-w-[16rem] translate-x-0 translate-y-0 rounded-none p-0 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 sm:max-w-[16rem]"
+        className="left-0 top-0 h-full max-w-[260px] translate-x-0 translate-y-0 rounded-none border-r border-sidebar-border bg-sidebar p-0 sm:max-w-[260px]"
         showCloseButton={false}
       >
-        <div className="flex h-14 items-center gap-2 border-b px-4 font-heading text-base font-medium">
-          <div className="flex size-6 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
+        <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-5">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
             M
           </div>
-          MeetFlow
+          <span className="text-sm font-semibold text-sidebar-foreground">MeetFlow</span>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 p-3">
-          {navItems.map((item) => {
-            const isActive =
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname.startsWith(item.href)
+        <nav className="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Mobile navigation">
+          {navSections.map((section) => (
+            <div key={section.label} className="mb-5 last:mb-0">
+              <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-sidebar-muted/40">
+                {section.label}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {section.items.map((item) => {
+                  const isActive =
+                    item.href === "/dashboard"
+                      ? pathname === "/dashboard"
+                      : pathname.startsWith(item.href)
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => onOpenChange(false)}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "justify-start gap-2.5 font-normal",
-                  isActive && "bg-muted font-medium text-foreground hover:bg-muted"
-                )}
-              >
-                <item.icon className="size-4 shrink-0" />
-                {item.title}
-              </Link>
-            )
-          })}
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => onOpenChange(false)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={cn(
+                        "relative flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm font-normal text-sidebar-muted transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-0.5 before:rounded-r-full before:bg-brand before:opacity-0 before:transition-opacity before:duration-150",
+                        isActive && "bg-brand-soft font-medium text-sidebar-accent-foreground shadow-sm before:opacity-100"
+                      )}
+                    >
+                      <item.icon className={cn("size-4 shrink-0 transition-transform duration-150", isActive && "scale-105")} />
+                      {item.title}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
+        <SidebarUserNav />
       </DialogContent>
     </Dialog>
   )

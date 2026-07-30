@@ -146,6 +146,27 @@ export async function updateAvailabilityInterval(
   revalidatePath("/dashboard/availability")
 }
 
+export async function toggleAvailabilityInterval(id: string, enabled: boolean) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorized")
+
+  const interval = await prisma.availabilityInterval.findUnique({
+    where: { id },
+    include: { weeklyAvailability: true },
+  })
+
+  if (!interval || interval.weeklyAvailability.userId !== session.user.id) {
+    throw new Error("Not found")
+  }
+
+  await prisma.availabilityInterval.update({
+    where: { id },
+    data: { isEnabled: enabled },
+  })
+
+  revalidatePath("/dashboard/availability")
+}
+
 export async function deleteAvailabilityInterval(id: string) {
   const session = await auth()
   if (!session?.user?.id) {

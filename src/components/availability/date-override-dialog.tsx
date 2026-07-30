@@ -3,7 +3,7 @@
 import { useEffect, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon } from "lucide-react"
+import { CalendarPlusIcon, Loader2Icon } from "lucide-react"
 
 import { createDateOverrideSchema } from "@/lib/schemas/availability"
 import type { CreateDateOverrideInput } from "@/lib/schemas/availability"
@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ export function DateOverrideDialog({
     handleSubmit,
     reset,
     watch,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<CreateDateOverrideInput>({
@@ -91,10 +93,7 @@ export function DateOverrideDialog({
       }
 
       toast.add({
-        title:
-          mode === "create"
-            ? "Date override created"
-            : "Date override updated",
+        title: mode === "create" ? "Date override created" : "Date override updated",
         type: "success",
       })
       onOpenChange(false)
@@ -104,12 +103,7 @@ export function DateOverrideDialog({
   function handleOpenChange(open: boolean) {
     onOpenChange(open)
     if (!open) {
-      reset({
-        date: "",
-        isAvailable: true,
-        startTime: undefined,
-        endTime: undefined,
-      })
+      reset({ date: "", isAvailable: true, startTime: undefined, endTime: undefined })
     }
   }
 
@@ -129,7 +123,8 @@ export function DateOverrideDialog({
       <DialogContent className="sm:max-w-sm">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarPlusIcon className="size-4" />
               {mode === "create" ? "Add date override" : "Edit date override"}
             </DialogTitle>
             <DialogDescription>
@@ -138,41 +133,41 @@ export function DateOverrideDialog({
                 : "Update your date override."}
             </DialogDescription>
           </DialogHeader>
+
           <div className="flex flex-col gap-4 py-4">
             {mode === "create" && (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  {...register("date")}
-                />
+                <Input id="date" type="date" {...register("date")} />
                 {errors.date && (
                   <p className="text-xs text-destructive">{errors.date.message}</p>
                 )}
               </div>
             )}
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="size-4 rounded border-input"
-                {...register("isAvailable")}
+
+            <div className="flex items-center gap-2">
+              <Switch
+                id="isAvailable"
+                checked={isAvailable}
+                onChange={(v) => setValue("isAvailable", v)}
               />
-              Available this day
-            </label>
+              <Label htmlFor="isAvailable" className="text-sm cursor-pointer">
+                Available this day
+              </Label>
+            </div>
+
             {isAvailable && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="startTime">Start time</Label>
                   <Input
                     id="startTime"
                     type="time"
+                    step={900}
                     {...register("startTime")}
                   />
                   {errors.startTime && (
-                    <p className="text-xs text-destructive">
-                      {errors.startTime.message}
-                    </p>
+                    <p className="text-xs text-destructive">{errors.startTime.message}</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -180,17 +175,17 @@ export function DateOverrideDialog({
                   <Input
                     id="endTime"
                     type="time"
+                    step={900}
                     {...register("endTime")}
                   />
                   {errors.endTime && (
-                    <p className="text-xs text-destructive">
-                      {errors.endTime.message}
-                    </p>
+                    <p className="text-xs text-destructive">{errors.endTime.message}</p>
                   )}
                 </div>
               </div>
             )}
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -202,7 +197,7 @@ export function DateOverrideDialog({
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2Icon className="animate-spin" />}
-              {mode === "create" ? "Create" : "Save"}
+              {mode === "create" ? "Create override" : "Save"}
             </Button>
           </DialogFooter>
         </form>

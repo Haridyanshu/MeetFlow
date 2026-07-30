@@ -27,11 +27,19 @@ const iconMap: Record<ActivityEvent["type"], React.ComponentType<{ className?: s
 }
 
 const colorMap: Record<ActivityEvent["type"], string> = {
-  booking_created: "text-emerald-600 dark:text-emerald-400",
+  booking_created: "text-brand",
   booking_cancelled: "text-destructive",
-  booking_rescheduled: "text-amber-600 dark:text-amber-400",
-  team_created: "text-blue-600 dark:text-blue-400",
-  invitation_sent: "text-purple-600 dark:text-purple-400",
+  booking_rescheduled: "text-warning",
+  team_created: "text-brand",
+  invitation_sent: "text-muted-foreground",
+}
+
+const bgMap: Record<ActivityEvent["type"], string> = {
+  booking_created: "bg-brand-soft",
+  booking_cancelled: "bg-destructive/10",
+  booking_rescheduled: "bg-warning/10",
+  team_created: "bg-brand-soft/60",
+  invitation_sent: "bg-muted",
 }
 
 function timeAgo(date: Date) {
@@ -51,7 +59,10 @@ export function RecentActivity({ data }: { data: ActivityEvent[] }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Recent activity</CardTitle>
+          <div className="flex items-center gap-2">
+            <ActivityIcon className="size-4 text-brand" />
+            <CardTitle>Recent activity</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -67,19 +78,31 @@ export function RecentActivity({ data }: { data: ActivityEvent[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent activity</CardTitle>
+        <div className="flex items-center gap-2">
+          <ActivityIcon className="size-4 text-brand" />
+          <CardTitle>Recent activity</CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y">
+        <div className="divide-y divide-border/30">
           {data.map((event) => {
             const Icon = iconMap[event.type]
             return (
-              <div key={event.id} className="flex items-start gap-3 px-(--card-spacing) py-3">
-                <Icon className={`mt-0.5 size-4 shrink-0 ${colorMap[event.type]}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate">{event.description}</p>
+              <div
+                key={event.id}
+                className="flex items-start gap-3 px-(--card-spacing) py-3 transition-colors hover:bg-muted/20"
+              >
+                <div
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${bgMap[event.type]}`}
+                >
+                  <Icon className={`size-4 ${colorMap[event.type]}`} />
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(event.timestamp)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">{event.description}</p>
+                </div>
+                <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground pt-0.5">
+                  {timeAgo(event.timestamp)}
+                </span>
               </div>
             )
           })}

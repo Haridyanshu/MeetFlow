@@ -26,7 +26,10 @@ export function TeamAnalyticsSection({ data }: { data: TeamAnalyticsData[] }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Team analytics</CardTitle>
+          <div className="flex items-center gap-2">
+            <UsersIcon className="size-4 text-brand" />
+            <CardTitle>Team analytics</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -45,35 +48,49 @@ export function TeamAnalyticsSection({ data }: { data: TeamAnalyticsData[] }) {
         <Card key={team.id}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>{team.name}</CardTitle>
-              <span className="text-sm text-muted-foreground">{team.totalBookings} bookings</span>
+              <div className="flex items-center gap-2">
+                <UsersIcon className="size-4 text-brand" />
+                <CardTitle>{team.name}</CardTitle>
+              </div>
+              <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                {team.totalBookings} booking{team.totalBookings !== 1 ? "s" : ""}
+              </span>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex gap-4 text-sm">
-              <div className="rounded-lg bg-muted px-3 py-2">
-                <span className="text-muted-foreground">Round Robin: </span>
-                <span className="font-medium tabular-nums">{team.roundRobinBookings}</span>
+            <div className="flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 text-xs">
+                <span className="text-muted-foreground">Round Robin</span>
+                <span className="font-medium tabular-nums text-foreground">{team.roundRobinBookings}</span>
               </div>
-              <div className="rounded-lg bg-muted px-3 py-2">
-                <span className="text-muted-foreground">Collective: </span>
-                <span className="font-medium tabular-nums">{team.collectiveBookings}</span>
+              <div className="inline-flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 text-xs">
+                <span className="text-muted-foreground">Collective</span>
+                <span className="font-medium tabular-nums text-foreground">{team.collectiveBookings}</span>
               </div>
             </div>
             {team.memberLeaderboard.length > 0 && (
               <div>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">Member leaderboard</p>
-                <div className="divide-y">
+                <p className="mb-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Member leaderboard</p>
+                <div className="divide-y divide-border/30 rounded-lg border border-border/50">
                   {team.memberLeaderboard.map((member, idx) => (
-                    <div key={member.email} className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-4">{idx + 1}.</span>
+                    <div
+                      key={member.email}
+                      className="flex items-center justify-between px-3 py-2 transition-colors hover:bg-muted/20"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs tabular-nums text-muted-foreground w-4 shrink-0 text-right">
+                          {idx + 1}
+                        </span>
                         <Avatar size="sm">
-                          <AvatarFallback>{member.name.charAt(0).toUpperCase()}</AvatarFallback>
+                          <AvatarFallback className="text-[10px]">
+                            {member.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{member.name}</span>
+                        <span className="text-sm truncate">{member.name}</span>
                       </div>
-                      <span className="text-sm tabular-nums text-muted-foreground">{member.bookings} bookings</span>
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {member.bookings} booking{member.bookings !== 1 ? "s" : ""}
+                      </span>
                     </div>
                   ))}
                 </div>

@@ -3,7 +3,7 @@
 import { useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, ArrowLeftIcon } from "lucide-react"
 
 import { createBookingSchema } from "@/lib/schemas/booking"
 import type { CreateBookingInput } from "@/lib/schemas/booking"
@@ -14,13 +14,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-
 interface BookingFormProps {
   eventTypeId: string
   isPaid: boolean
   price: number | null
   currency: string | null
+  eventTitle: string
+  eventDuration: number
   selectedSlot: { startTime: string; endTime: string }
+  timezone: string
   onSuccess: (booking: unknown) => void
   onBack: () => void
 }
@@ -47,7 +49,10 @@ export function BookingForm({
   isPaid,
   price,
   currency,
+  eventTitle,
+  eventDuration,
   selectedSlot,
+  timezone,
   onSuccess,
   onBack,
 }: BookingFormProps) {
@@ -67,7 +72,7 @@ export function BookingForm({
       guestNotes: "",
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezone,
     },
   })
 
@@ -114,21 +119,35 @@ export function BookingForm({
     })
   }
 
+  const dateLabel = formatDate(selectedSlot.startTime)
+  const timeLabel = `${formatTime(selectedSlot.startTime)} \u2013 ${formatTime(selectedSlot.endTime)}`
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
+      {/* Header */}
       <div>
         <h2 className="text-lg font-heading font-medium">Enter your details</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {formatDate(selectedSlot.startTime)} at{" "}
-          {formatTime(selectedSlot.startTime)} &ndash;{" "}
-          {formatTime(selectedSlot.endTime)}
-        </p>
+        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{eventTitle}</span>
+          <span className="text-muted-foreground/40">&middot;</span>
+          <span>{eventDuration} min</span>
+          <span className="text-muted-foreground/40">&middot;</span>
+          <span>{dateLabel}</span>
+          <span className="text-muted-foreground/40">&middot;</span>
+          <span className="font-mono text-xs">{timeLabel}</span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      {/* Fields */}
+      <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="guestName">Name</Label>
-          <Input id="guestName" {...register("guestName")} />
+          <Input
+            id="guestName"
+            placeholder="Your name"
+            {...register("guestName")}
+            className="h-9"
+          />
           {errors.guestName && (
             <p className="text-xs text-destructive">
               {errors.guestName.message}
@@ -140,7 +159,9 @@ export function BookingForm({
           <Input
             id="guestEmail"
             type="email"
+            placeholder="you@example.com"
             {...register("guestEmail")}
+            className="h-9"
           />
           {errors.guestEmail && (
             <p className="text-xs text-destructive">
@@ -150,7 +171,11 @@ export function BookingForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="guestNotes">Notes (optional)</Label>
-          <Textarea id="guestNotes" {...register("guestNotes")} />
+          <Textarea
+            id="guestNotes"
+            placeholder="Anything you'd like the host to know..."
+            {...register("guestNotes")}
+          />
           {errors.guestNotes && (
             <p className="text-xs text-destructive">
               {errors.guestNotes.message}
@@ -165,27 +190,33 @@ export function BookingForm({
         </div>
       )}
 
+      {/* Price notice */}
       {isPaid && price != null && (
-        <div className="rounded-lg border bg-muted/50 px-3 py-2 text-sm">
-          <span className="text-muted-foreground">Price: </span>
-          <span className="font-medium">
-            {((currency ?? "usd").toUpperCase())} {(price / 100).toFixed(2)}
-          </span>
-          <p className="text-xs text-muted-foreground mt-1">You will be redirected to Stripe to complete payment.</p>
+        <div className="rounded-lg border border-brand/20 bg-brand-soft px-4 py-3">
+          <p className="text-sm font-medium text-brand">
+            {(currency ?? "usd").toUpperCase()} {(price / 100).toFixed(2)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            You will be redirected to Stripe to complete payment.
+          </p>
         </div>
       )}
 
+      {/* Actions */}
       <div className="flex items-center gap-3">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
+          size="sm"
           onClick={onBack}
           disabled={isPending}
+          className="gap-1.5"
         >
+          <ArrowLeftIcon className="size-3.5" />
           Back
         </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending && <Loader2Icon className="animate-spin" />}
+        <Button type="submit" disabled={isPending} className="flex-1 sm:flex-none">
+          {isPending && <Loader2Icon className="size-4 animate-spin" />}
           {isPaid ? "Proceed to payment" : "Confirm booking"}
         </Button>
       </div>

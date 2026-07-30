@@ -6,15 +6,28 @@ export default async function IntegrationsPage() {
   const session = await auth()
 
   let connected = false
+  let expiresAt: number | null = null
+  let lastSync: Date | null = null
+
   if (session?.user?.id) {
-    const account = await prisma.account.findFirst({
-      where: { userId: session.user.id, provider: "google" },
-      select: { access_token: true, refresh_token: true, scope: true },
-    })
+    const [account, latestEvent] = await Promise.all([
+      prisma.account.findFirst({
+        where: { userId: session.user.id, provider: "google" },
+        select: { access_token: true, refresh_token: true, scope: true, expires_at: true },
+      }),
+      prisma.calendarEvent.findFirst({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+    ])
 
     connected =
       !!account?.access_token &&
       (account.scope?.includes("calendar.events") ?? false)
+
+    expiresAt = account?.expires_at ?? null
+    lastSync = latestEvent?.createdAt ?? null
   }
 
   return (
@@ -25,7 +38,13 @@ export default async function IntegrationsPage() {
           Connect your calendar and video conferencing tools.
         </p>
       </div>
-      <GoogleCalendarCard connected={connected} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <GoogleCalendarCard
+          connected={connected}
+          expiresAt={expiresAt}
+          lastSync={lastSync}
+        />
+      </div>
     </div>
   )
 }

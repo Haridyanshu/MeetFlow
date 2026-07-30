@@ -42,13 +42,13 @@ export async function AnalyticsInner({
         <StatusDistributionChart data={statusDistribution} />
         <EventTypePopularityChart data={eventTypePopularity} />
       </div>
-      <div className="grid gap-4 lg:grid-cols-1">
-        <RevenueOverTimeChart data={revenueOverTime} />
-      </div>
+      <RevenueOverTimeChart data={revenueOverTime} />
       <EventTypeAnalyticsTable data={eventTypeAnalytics} />
       <TeamAnalyticsSection data={teamAnalytics} />
-      <AvailabilityInsights data={insights} />
-      <RecentActivity data={activity} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <AvailabilityInsights data={insights} />
+        <RecentActivity data={activity} />
+      </div>
     </>
   )
 }

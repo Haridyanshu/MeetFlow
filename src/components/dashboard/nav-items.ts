@@ -1,3 +1,5 @@
+"use client"
+
 import {
   LayoutDashboardIcon,
   CalendarPlusIcon,
@@ -15,45 +17,70 @@ export interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-export const navItems: NavItem[] = [
+export interface NavSection {
+  label: string
+  items: NavItem[]
+}
+
+export const navSections: NavSection[] = [
   {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboardIcon,
+    label: "Main",
+    items: [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboardIcon,
+      },
+    ],
   },
   {
-    title: "Event Types",
-    href: "/dashboard/event-types",
-    icon: CalendarPlusIcon,
+    label: "Scheduling",
+    items: [
+      {
+        title: "Event Types",
+        href: "/dashboard/event-types",
+        icon: CalendarPlusIcon,
+      },
+      {
+        title: "Availability",
+        href: "/dashboard/availability",
+        icon: ClockIcon,
+      },
+      {
+        title: "Bookings",
+        href: "/dashboard/bookings",
+        icon: CalendarCheckIcon,
+      },
+    ],
   },
   {
-    title: "Availability",
-    href: "/dashboard/availability",
-    icon: ClockIcon,
+    label: "Team",
+    items: [
+      {
+        title: "Teams",
+        href: "/dashboard/teams",
+        icon: UsersIcon,
+      },
+      {
+        title: "Analytics",
+        href: "/dashboard/analytics",
+        icon: BarChart3Icon,
+      },
+    ],
   },
   {
-    title: "Bookings",
-    href: "/dashboard/bookings",
-    icon: CalendarCheckIcon,
-  },
-  {
-    title: "Teams",
-    href: "/dashboard/teams",
-    icon: UsersIcon,
-  },
-  {
-    title: "Analytics",
-    href: "/dashboard/analytics",
-    icon: BarChart3Icon,
-  },
-  {
-    title: "Integrations",
-    href: "/dashboard/integrations",
-    icon: PuzzleIcon,
-  },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: SettingsIcon,
+    label: "Workspace",
+    items: [
+      {
+        title: "Integrations",
+        href: "/dashboard/integrations",
+        icon: PuzzleIcon,
+      },
+      {
+        title: "Settings",
+        href: "/dashboard/settings",
+        icon: SettingsIcon,
+      },
+    ],
   },
 ]

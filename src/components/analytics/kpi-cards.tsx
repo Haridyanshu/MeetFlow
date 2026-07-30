@@ -8,8 +8,12 @@ import {
   DollarSignIcon,
   RefreshCwIcon,
   LayersIcon,
+  TrendingUpIcon,
+  TrendingDownIcon,
+  MinusIcon,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 interface KPIs {
   totalBookings: number
@@ -25,26 +29,46 @@ interface KPIs {
 function ChangeBadge({ current, previous }: { current: number; previous: number }) {
   if (previous === 0) {
     if (current === 0) return null
-    return <span className="text-xs text-emerald-600 dark:text-emerald-400">New</span>
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs font-medium text-brand">
+        <MinusIcon className="size-3" />New
+      </span>
+    )
   }
   const pct = Math.round(((current - previous) / previous) * 100)
   if (pct === 0) return <span className="text-xs text-muted-foreground">0%</span>
+  const isPositive = pct > 0
   return (
-    <span className={`text-xs ${pct > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-      {pct > 0 ? "+" : ""}{pct}%
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-xs font-medium",
+        isPositive ? "text-brand" : "text-destructive",
+      )}
+    >
+      {isPositive ? <TrendingUpIcon className="size-3" /> : <TrendingDownIcon className="size-3" />}
+      {isPositive ? "+" : ""}{pct}%
     </span>
   )
 }
 
-const cards = [
-  { key: "totalBookings", label: "Total Bookings", icon: CalendarCheckIcon },
-  { key: "upcomingBookings", label: "Upcoming", icon: CalendarIcon },
-  { key: "completedBookings", label: "Completed", icon: ClockIcon },
-  { key: "cancelledBookings", label: "Cancelled", icon: CalendarX2Icon },
-  { key: "rescheduledBookings", label: "Rescheduled", icon: RefreshCwIcon },
-  { key: "activeEventTypes", label: "Active Event Types", icon: LayersIcon },
-  { key: "revenue", label: "Revenue", icon: DollarSignIcon },
-] as const
+interface KpiCardConfig {
+  key: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  iconBg: string
+  iconColor: string
+  priority: number
+}
+
+const cardConfigs: KpiCardConfig[] = [
+  { key: "revenue", label: "Revenue", icon: DollarSignIcon, iconBg: "bg-brand-soft", iconColor: "text-brand", priority: 1 },
+  { key: "totalBookings", label: "Total Bookings", icon: CalendarCheckIcon, iconBg: "bg-brand-soft", iconColor: "text-brand", priority: 2 },
+  { key: "completedBookings", label: "Completed", icon: ClockIcon, iconBg: "bg-brand-soft/60", iconColor: "text-brand", priority: 3 },
+  { key: "upcomingBookings", label: "Upcoming", icon: CalendarIcon, iconBg: "bg-muted", iconColor: "text-muted-foreground", priority: 4 },
+  { key: "cancelledBookings", label: "Cancelled", icon: CalendarX2Icon, iconBg: "bg-destructive/10", iconColor: "text-destructive", priority: 5 },
+  { key: "rescheduledBookings", label: "Rescheduled", icon: RefreshCwIcon, iconBg: "bg-muted", iconColor: "text-muted-foreground", priority: 6 },
+  { key: "activeEventTypes", label: "Active Events", icon: LayersIcon, iconBg: "bg-muted", iconColor: "text-muted-foreground", priority: 7 },
+]
 
 function kpiValue(key: string, kpis: KPIs): number {
   switch (key) {
@@ -76,22 +100,26 @@ function prevValue(key: string, kpis: KPIs): number {
 
 export function KPICards({ kpis }: { kpis: KPIs }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      {cards.map((card) => {
-        const Icon = card.icon
-        const value = kpiValue(card.key, kpis)
-        const prev = prevValue(card.key, kpis)
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+      {cardConfigs.map((cfg) => {
+        const Icon = cfg.icon
+        const value = kpiValue(cfg.key, kpis)
+        const prev = prevValue(cfg.key, kpis)
 
         return (
-          <Card key={card.key}>
-            <CardHeader className="flex-row items-center gap-2 space-y-0">
-              <Icon className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-normal">{card.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-semibold tabular-nums">{kpiDisplay(card.key, value)}</span>
+          <Card key={cfg.key} className={cn(cfg.key === "revenue" && "sm:col-span-2 lg:col-span-1")}>
+            <CardContent className="flex flex-col gap-2.5 p-4">
+              <div className="flex items-center justify-between">
+                <div className={cn("flex size-8 items-center justify-center rounded-lg", cfg.iconBg)}>
+                  <Icon className={cn("size-4", cfg.iconColor)} />
+                </div>
                 <ChangeBadge current={value} previous={prev} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{cfg.label}</p>
+                <p className="mt-0.5 text-xl font-semibold tabular-nums tracking-tight">
+                  {kpiDisplay(cfg.key, value)}
+                </p>
               </div>
             </CardContent>
           </Card>

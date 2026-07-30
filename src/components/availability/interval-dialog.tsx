@@ -3,7 +3,7 @@
 import { useEffect, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon } from "lucide-react"
+import { ClockIcon, Loader2Icon } from "lucide-react"
 
 import { createAvailabilityIntervalSchema } from "@/lib/schemas/availability"
 import type {
@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+
+const TIME_PRESETS = [
+  { label: "Morning", start: "09:00", end: "12:00" },
+  { label: "Afternoon", start: "13:00", end: "17:00" },
+  { label: "Full day", start: "09:00", end: "17:00" },
+  { label: "Lunch", start: "12:00", end: "13:00" },
+]
 
 interface IntervalDialogProps {
   mode: "create" | "edit"
@@ -53,7 +61,9 @@ export function IntervalDialog({
     register,
     handleSubmit,
     reset,
+    setValue,
     setError,
+    watch,
     formState: { errors },
   } = useForm<CreateAvailabilityIntervalInput>({
     resolver: zodResolver(createAvailabilityIntervalSchema),
@@ -64,6 +74,8 @@ export function IntervalDialog({
       isEnabled: true,
     },
   })
+
+  const isEnabled = watch("isEnabled")
 
   async function onSubmit(data: CreateAvailabilityIntervalInput) {
     startTransition(async () => {
@@ -90,8 +102,7 @@ export function IntervalDialog({
       }
 
       toast.add({
-        title:
-          mode === "create" ? "Time interval added" : "Time interval updated",
+        title: mode === "create" ? "Time slot added" : "Time slot updated",
         type: "success",
       })
       onOpenChange(false)
@@ -126,22 +137,49 @@ export function IntervalDialog({
       <DialogContent className="sm:max-w-sm">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>
-              {mode === "create" ? "Add time interval" : "Edit time interval"}
+            <DialogTitle className="flex items-center gap-2">
+              <ClockIcon className="size-4" />
+              {mode === "create" ? "Add time slot" : "Edit time slot"}
             </DialogTitle>
             <DialogDescription>
               {mode === "create"
-                ? "Add a new available time slot."
+                ? "Add an available time slot."
                 : "Update your available time slot."}
             </DialogDescription>
           </DialogHeader>
+
           <div className="flex flex-col gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            {/* Time presets */}
+            {mode === "create" && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Quick presets</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {TIME_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => {
+                        setValue("startTime", preset.start)
+                        setValue("endTime", preset.end)
+                      }}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Time pickers */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="startTime">Start time</Label>
                 <Input
                   id="startTime"
                   type="time"
+                  step={900}
                   {...register("startTime")}
                 />
                 {errors.startTime && (
@@ -153,6 +191,7 @@ export function IntervalDialog({
                 <Input
                   id="endTime"
                   type="time"
+                  step={900}
                   {...register("endTime")}
                 />
                 {errors.endTime && (
@@ -160,15 +199,20 @@ export function IntervalDialog({
                 )}
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="size-4 rounded border-input"
-                {...register("isEnabled")}
+
+            {/* Enabled toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="isEnabled"
+                checked={isEnabled ?? true}
+                onChange={(v) => setValue("isEnabled", v)}
               />
-              Enabled
-            </label>
+              <Label htmlFor="isEnabled" className="text-sm cursor-pointer">
+                Slot enabled
+              </Label>
+            </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -180,7 +224,7 @@ export function IntervalDialog({
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2Icon className="animate-spin" />}
-              {mode === "create" ? "Add" : "Save"}
+              {mode === "create" ? "Add slot" : "Save"}
             </Button>
           </DialogFooter>
         </form>

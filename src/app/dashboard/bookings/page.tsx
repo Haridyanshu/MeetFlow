@@ -5,15 +5,6 @@ import { BookingsPageClient } from "@/components/bookings/bookings-page-client"
 export default async function BookingsPage() {
   const session = await auth()
   const bookings = await getBookingsByUserId(session!.user.id)
-
-  const now = new Date()
-  const upcoming = bookings
-    .filter((b) => b.startTime >= now)
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-  const past = bookings
-    .filter((b) => b.startTime < now)
-    .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -22,7 +13,7 @@ export default async function BookingsPage() {
           View and manage your scheduled meetings.
         </p>
       </div>
-      <BookingsPageClient upcoming={upcoming} past={past} />
+      <BookingsPageClient bookings={bookings} />
     </div>
   )
 }

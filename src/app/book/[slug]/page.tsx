@@ -20,24 +20,26 @@ export default async function BookPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <BookingPageClient
-        eventType={{
-          id: eventType.id,
-          title: eventType.title,
-          description: eventType.description,
-          duration: eventType.duration,
-          location: eventType.location,
-          isPaid: eventType.isPaid,
-          price: eventType.price,
-          currency: eventType.currency,
-        }}
-        host={{
-          name: eventType.user.name,
-          email: eventType.user.email,
-          image: eventType.user.image,
-        }}
-      />
+    <div className="min-h-dvh bg-background">
+      <div className="mx-auto max-w-5xl border-x border-border/40">
+        <BookingPageClient
+          eventType={{
+            id: eventType.id,
+            title: eventType.title,
+            description: eventType.description,
+            duration: eventType.duration,
+            location: eventType.location,
+            isPaid: eventType.isPaid,
+            price: eventType.price,
+            currency: eventType.currency,
+          }}
+          host={{
+            name: eventType.user.name,
+            email: eventType.user.email,
+            image: eventType.user.image,
+          }}
+        />
+      </div>
     </div>
   )
 }

@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Loader2Icon } from "lucide-react"
+import { CopyIcon, Loader2Icon } from "lucide-react"
 
 import { copyAvailabilityToDays } from "@/lib/actions/availability"
 import { toast } from "@/components/ui/toast"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -66,7 +67,7 @@ export function CopyScheduleDialog({
 
   function handleToggle(day: number) {
     setTargetDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     )
   }
 
@@ -82,32 +83,35 @@ export function CopyScheduleDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Copy schedule</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CopyIcon className="size-4" />
+            Copy schedule
+          </DialogTitle>
           <DialogDescription>
-            Copy intervals from {DAY_NAMES[sourceDayOfWeek]} to other days.
+            Copy intervals from <strong>{DAY_NAMES[sourceDayOfWeek]}</strong> to other days.
             Existing intervals on target days will be replaced.
           </DialogDescription>
         </DialogHeader>
+
         <div className="flex flex-col gap-3 py-4">
-          <p className="text-sm font-medium">Copy to:</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Copy to:</p>
           {[0, 1, 2, 3, 4, 5, 6]
             .filter((d) => d !== sourceDayOfWeek)
             .map((day) => (
               <label
                 key={day}
-                className="flex cursor-pointer items-center gap-2 text-sm"
+                className="flex cursor-pointer items-center gap-3 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-muted"
               >
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-input"
+                <Switch
                   checked={targetDays.includes(day)}
                   onChange={() => handleToggle(day)}
                 />
-                {DAY_NAMES[day]}
+                <span className="text-sm">{DAY_NAMES[day]}</span>
               </label>
             ))}
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
+
         <DialogFooter>
           <Button
             type="button"
@@ -119,7 +123,7 @@ export function CopyScheduleDialog({
           </Button>
           <Button onClick={handleCopy} disabled={isPending}>
             {isPending && <Loader2Icon className="animate-spin" />}
-            Copy
+            Copy to {targetDays.length} day{targetDays.length !== 1 ? "s" : ""}
           </Button>
         </DialogFooter>
       </DialogContent>

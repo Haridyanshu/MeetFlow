@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import { ClockIcon } from "lucide-react"
 
 import { DayCard } from "@/components/availability/day-card"
 import { IntervalDialog } from "@/components/availability/interval-dialog"
 import { CopyScheduleDialog } from "@/components/availability/copy-schedule-dialog"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -19,9 +21,10 @@ interface Interval {
 
 interface WeeklyScheduleProps {
   intervals: Interval[]
+  onToggleEnabled: (id: string, enabled: boolean) => void
 }
 
-export function WeeklySchedule({ intervals }: WeeklyScheduleProps) {
+export function WeeklySchedule({ intervals, onToggleEnabled }: WeeklyScheduleProps) {
   const [intervalDialogOpen, setIntervalDialogOpen] = useState(false)
   const [intervalMode, setIntervalMode] = useState<"create" | "edit">("create")
   const [intervalDay, setIntervalDay] = useState(1)
@@ -39,17 +42,19 @@ export function WeeklySchedule({ intervals }: WeeklyScheduleProps) {
       acc[interval.dayOfWeek].push(interval)
       return acc
     },
-    {}
+    {},
   )
 
-  function handleAdd(dayOfWeek: number) {
+  const today = new Date().getDay()
+
+  const handleAdd = useCallback((dayOfWeek: number) => {
     setIntervalMode("create")
     setIntervalDay(dayOfWeek)
     setIntervalDefaults(undefined)
     setIntervalDialogOpen(true)
-  }
+  }, [])
 
-  function handleEdit(interval: Interval) {
+  const handleEdit = useCallback((interval: Interval) => {
     setIntervalMode("edit")
     setIntervalDay(interval.dayOfWeek)
     setIntervalDefaults({
@@ -59,29 +64,46 @@ export function WeeklySchedule({ intervals }: WeeklyScheduleProps) {
       isEnabled: interval.isEnabled,
     })
     setIntervalDialogOpen(true)
-  }
+  }, [])
 
-  function handleCopy(dayOfWeek: number) {
+  const handleCopy = useCallback((dayOfWeek: number) => {
     setCopySourceDay(dayOfWeek)
     setCopyDialogOpen(true)
-  }
+  }, [])
+
+  const totalSlots = intervals.length
+  const enabledSlots = intervals.filter((i) => i.isEnabled).length
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-heading font-medium">Weekly schedule</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {DAY_ORDER.map((day) => (
-          <DayCard
-            key={day}
-            dayOfWeek={day}
-            dayName={DAY_NAMES[day]}
-            intervals={intervalsByDay[day] ?? []}
-            onAdd={handleAdd}
-            onEdit={handleEdit}
-            onCopy={handleCopy}
-          />
-        ))}
-      </div>
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ClockIcon className="size-4 text-brand" />
+          <CardTitle>Weekly schedule</CardTitle>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{enabledSlots} active slot{enabledSlots !== 1 ? "s" : ""}</span>
+          <span className="text-muted-foreground/40">&middot;</span>
+          <span>{totalSlots} total</span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {DAY_ORDER.map((day) => (
+            <DayCard
+              key={day}
+              dayOfWeek={day}
+              dayName={DAY_NAMES[day]}
+              intervals={intervalsByDay[day] ?? []}
+              onAdd={handleAdd}
+              onEdit={handleEdit}
+              onCopy={handleCopy}
+              onToggleEnabled={onToggleEnabled}
+              isToday={day === today}
+            />
+          ))}
+        </div>
+      </CardContent>
       <IntervalDialog
         mode={intervalMode}
         dayOfWeek={intervalDay}
@@ -94,6 +116,6 @@ export function WeeklySchedule({ intervals }: WeeklyScheduleProps) {
         open={copyDialogOpen}
         onOpenChange={setCopyDialogOpen}
       />
-    </div>
+    </Card>
   )
 }

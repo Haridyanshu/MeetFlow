@@ -153,6 +153,49 @@ export async function deleteEventType(id: string) {
   revalidatePath("/dashboard")
 }
 
+export async function duplicateEventType(id: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorized")
+
+  const eventType = await prisma.eventType.findUnique({ where: { id } })
+  if (!eventType || eventType.userId !== session.user.id) throw new Error("Not found")
+
+  let slug = `${eventType.slug}-copy`
+  let counter = 1
+  while (await prisma.eventType.findUnique({ where: { userId_slug: { userId: session.user.id, slug } } })) {
+    counter++
+    slug = `${eventType.slug}-copy-${counter}`
+  }
+
+  await prisma.eventType.create({
+    data: {
+      title: `${eventType.title} (copy)`,
+      slug,
+      description: eventType.description,
+      duration: eventType.duration,
+      color: eventType.color,
+      location: eventType.location,
+      isActive: eventType.isActive,
+      requiresConfirmation: eventType.requiresConfirmation,
+      schedulingType: eventType.schedulingType,
+      bufferBefore: eventType.bufferBefore,
+      bufferAfter: eventType.bufferAfter,
+      minimumNotice: eventType.minimumNotice,
+      maximumAdvanceDays: eventType.maximumAdvanceDays,
+      maximumBookingsPerDay: eventType.maximumBookingsPerDay,
+      maximumBookingsPerWeek: eventType.maximumBookingsPerWeek,
+      isPaid: eventType.isPaid,
+      price: eventType.price,
+      currency: eventType.currency,
+      teamId: eventType.teamId,
+      userId: session.user.id,
+    },
+  })
+
+  revalidatePath("/dashboard/event-types")
+  revalidatePath("/dashboard")
+}
+
 export async function toggleEventTypeActive(id: string) {
   const session = await auth()
   if (!session?.user?.id) {

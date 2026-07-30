@@ -50,6 +50,9 @@ export function BookingPageClient({
   const [noSlotsReason, setNoSlotsReason] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [booking, setBooking] = useState<unknown>(null)
+  const [timezone, setTimezone] = useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  )
 
   const handleDateChange = useCallback(
     async (date: string) => {
@@ -69,7 +72,7 @@ export function BookingPageClient({
         setIsLoadingSlots(false)
       }
     },
-    [eventType.id]
+    [eventType.id],
   )
 
   const handleSlotSelect = useCallback((slot: Slot) => {
@@ -88,42 +91,58 @@ export function BookingPageClient({
   }, [])
 
   return (
-    <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 md:grid-cols-[400px_1fr]">
+    <div className="mx-auto grid min-h-dvh max-w-5xl grid-cols-1 md:grid-cols-[360px_1fr]">
       <EventInfoPanel
         eventType={eventType}
         host={host}
         selectedSlot={selectedSlot}
         step={step}
       />
-      <main className="flex flex-col p-6 md:p-10">
-        {step === "date" && (
-          <TimeSlots
-            selectedDate={selectedDate}
-            slots={slots}
-            isLoading={isLoadingSlots}
-            error={slotsError}
-            noSlotsReason={noSlotsReason as "no_availability" | "booking_window" | "minimum_notice" | "daily_limit" | "weekly_limit" | null | undefined}
-            onDateChange={handleDateChange}
-            onSlotSelect={handleSlotSelect}
-          />
-        )}
-        {step === "form" && selectedSlot && (
-          <BookingForm
-            eventTypeId={eventType.id}
-            isPaid={eventType.isPaid}
-            price={eventType.price}
-            currency={eventType.currency}
-            selectedSlot={selectedSlot}
-            onSuccess={handleBookingSuccess}
-            onBack={handleBackToSlots}
-          />
-        )}
-        {step === "confirmation" && (
-          <BookingConfirmation
-            booking={booking as BookingConfirmationProps["booking"]}
-            eventType={eventType}
-          />
-        )}
+      <main className="flex flex-col p-6 pt-8 md:p-10">
+        <div className="mx-auto w-full max-w-md transition-all duration-300">
+          {step === "date" && (
+            <TimeSlots
+              selectedDate={selectedDate}
+              slots={slots}
+              isLoading={isLoadingSlots}
+              error={slotsError}
+              noSlotsReason={
+                noSlotsReason as
+                  | "no_availability"
+                  | "booking_window"
+                  | "minimum_notice"
+                  | "daily_limit"
+                  | "weekly_limit"
+                  | null
+                  | undefined
+              }
+              timezone={timezone}
+              onDateChange={handleDateChange}
+              onSlotSelect={handleSlotSelect}
+              onTimezoneChange={setTimezone}
+            />
+          )}
+          {step === "form" && selectedSlot && (
+            <BookingForm
+              eventTypeId={eventType.id}
+              isPaid={eventType.isPaid}
+              price={eventType.price}
+              currency={eventType.currency}
+              eventTitle={eventType.title}
+              eventDuration={eventType.duration}
+              selectedSlot={selectedSlot}
+              timezone={timezone}
+              onSuccess={handleBookingSuccess}
+              onBack={handleBackToSlots}
+            />
+          )}
+          {step === "confirmation" && (
+            <BookingConfirmation
+              booking={booking as BookingConfirmationProps["booking"]}
+              eventType={eventType}
+            />
+          )}
+        </div>
       </main>
     </div>
   )

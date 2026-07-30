@@ -1,7 +1,6 @@
 "use client"
 
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -13,6 +12,8 @@ import {
   Cell,
   BarChart,
   Bar,
+  Area,
+  AreaChart,
   Legend,
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,7 +40,50 @@ interface RevenueOverTime {
   amount: number
 }
 
-const COLORS = ["#22c55e", "#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6"]
+const BRAND = "#10B981"
+const RED = "#ef4444"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ChartTooltip({ active, payload, label, formatter }: any) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-md text-sm">
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {payload.map((entry: any, idx: number) => (
+        <div key={idx} className="flex items-center gap-2 text-xs">
+          <span className="size-2 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span className="text-muted-foreground">{entry.name}:</span>
+          <span className="font-medium tabular-nums text-foreground">
+            {formatter ? formatter(entry.value) : entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomPieLabel({ cx, cy, midAngle, outerRadius, percent }: any) {
+  const RADIAN = Math.PI / 180
+  const radius = outerRadius + 24
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+  if (percent < 0.05) return null
+
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={x > cx ? "start" : "end"}
+      dominantBaseline="central"
+      className="fill-muted-foreground text-[11px]"
+    >
+      {(percent * 100).toFixed(0)}%
+    </text>
+  )
+}
 
 export function BookingsOverTimeChart({ data }: { data: BookingsOverTime[] }) {
   if (data.length === 0) {
@@ -48,7 +92,7 @@ export function BookingsOverTimeChart({ data }: { data: BookingsOverTime[] }) {
         <CardHeader>
           <CardTitle>Bookings over time</CardTitle>
         </CardHeader>
-        <CardContent className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        <CardContent className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
           No booking data for this period.
         </CardContent>
       </Card>
@@ -57,25 +101,55 @@ export function BookingsOverTimeChart({ data }: { data: BookingsOverTime[] }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle>Bookings over time</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="bookedGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BRAND} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={BRAND} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/50" vertical={false} />
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 11 }}
                 tickFormatter={(v: string) => v.slice(5)}
                 className="text-muted-foreground"
+                axisLine={false}
+                tickLine={false}
               />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="text-muted-foreground" />
-              <Tooltip />
-              <Line type="monotone" dataKey="booked" stroke="#22c55e" name="Booked" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="cancelled" stroke="#ef4444" name="Cancelled" strokeWidth={2} dot={false} />
-            </LineChart>
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11 }}
+                className="text-muted-foreground"
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<ChartTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="booked"
+                stroke={BRAND}
+                fill="url(#bookedGrad)"
+                name="Booked"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="cancelled"
+                stroke={RED}
+                name="Cancelled"
+                strokeWidth={1.5}
+                dot={false}
+                strokeDasharray="4 3"
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
@@ -84,13 +158,15 @@ export function BookingsOverTimeChart({ data }: { data: BookingsOverTime[] }) {
 }
 
 export function StatusDistributionChart({ data }: { data: StatusDist[] }) {
+  const COLORS = [BRAND, RED]
+
   if (data.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Booking status</CardTitle>
         </CardHeader>
-        <CardContent className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        <CardContent className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
           No data for this period.
         </CardContent>
       </Card>
@@ -99,11 +175,11 @@ export function StatusDistributionChart({ data }: { data: StatusDist[] }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle>Booking status</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -111,16 +187,25 @@ export function StatusDistributionChart({ data }: { data: StatusDist[] }) {
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
-                cy="50%"
+                cy="45%"
+                innerRadius={60}
                 outerRadius={100}
-                label={(entry: { name?: string; percent?: number }) => `${entry.name ?? ""} ${((entry.percent ?? 0) * 100).toFixed(0)}%`}
+                label={<CustomPieLabel />}
+                strokeWidth={0}
               >
                 {data.map((_, idx) => (
                   <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend
+                verticalAlign="bottom"
+                iconType="circle"
+                iconSize={8}
+                formatter={(value: string) => (
+                  <span className="text-xs text-muted-foreground">{value}</span>
+                )}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -136,7 +221,7 @@ export function EventTypePopularityChart({ data }: { data: EventTypePop[] }) {
         <CardHeader>
           <CardTitle>Event type popularity</CardTitle>
         </CardHeader>
-        <CardContent className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        <CardContent className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
           No event types with bookings in this period.
         </CardContent>
       </Card>
@@ -145,24 +230,33 @@ export function EventTypePopularityChart({ data }: { data: EventTypePop[] }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle>Event type popularity</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} className="text-muted-foreground" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/50" horizontal={false} />
+              <XAxis
+                type="number"
+                allowDecimals={false}
+                tick={{ fontSize: 11 }}
+                className="text-muted-foreground"
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis
                 type="category"
                 dataKey="title"
-                width={140}
+                width={150}
                 tick={{ fontSize: 11 }}
                 className="text-muted-foreground"
+                axisLine={false}
+                tickLine={false}
               />
-              <Tooltip />
-              <Bar dataKey="bookings" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="bookings" fill={BRAND} radius={[0, 4, 4, 0]} maxBarSize={20} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -178,7 +272,7 @@ export function RevenueOverTimeChart({ data }: { data: RevenueOverTime[] }) {
         <CardHeader>
           <CardTitle>Revenue over time</CardTitle>
         </CardHeader>
-        <CardContent className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        <CardContent className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
           No revenue data for this period.
         </CardContent>
       </Card>
@@ -187,28 +281,48 @@ export function RevenueOverTimeChart({ data }: { data: RevenueOverTime[] }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle>Revenue over time</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BRAND} stopOpacity={0.15} />
+                  <stop offset="95%" stopColor={BRAND} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/50" vertical={false} />
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 11 }}
                 tickFormatter={(v: string) => v.slice(5)}
                 className="text-muted-foreground"
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis
                 tick={{ fontSize: 11 }}
                 className="text-muted-foreground"
                 tickFormatter={(v) => `$${(Number(v) / 100).toFixed(0)}`}
+                axisLine={false}
+                tickLine={false}
               />
-              <Tooltip formatter={(value) => [`$${(Number(value) / 100).toFixed(2)}`, "Revenue"]} />
-              <Line type="monotone" dataKey="amount" stroke="#f59e0b" name="Revenue" strokeWidth={2} dot={false} />
-            </LineChart>
+              <Tooltip
+                content={<ChartTooltip formatter={(value: number) => `$${(value / 100).toFixed(2)}`} />}
+              />
+              <Area
+                type="monotone"
+                dataKey="amount"
+                stroke={BRAND}
+                fill="url(#revenueGrad)"
+                name="Revenue"
+                strokeWidth={2}
+                dot={false}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
