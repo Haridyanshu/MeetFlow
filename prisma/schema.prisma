@@ -121,20 +121,22 @@ enum BookingStatus {
 }
 
 model Booking {
-  id          String         @id @default(cuid())
-  userId      String
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventTypeId String
-  eventType   EventType      @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
-  guestName   String
-  guestEmail  String
-  guestNotes  String?
-  startTime   DateTime
-  endTime     DateTime
-  timezone    String
-  status      BookingStatus  @default(BOOKED)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id                    String         @id @default(cuid())
+  userId                String
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId           String
+  eventType             EventType      @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  guestName             String
+  guestEmail            String
+  guestNotes            String?
+  startTime             DateTime
+  endTime               DateTime
+  timezone              String
+  status                BookingStatus  @default(BOOKED)
+  googleCalendarEventId String?
+  googleCalendarId      String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   @@index([eventTypeId, startTime, status])
   @@index([userId, status])

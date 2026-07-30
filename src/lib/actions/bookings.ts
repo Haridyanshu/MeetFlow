@@ -8,6 +8,7 @@ import { Prisma } from "@/generated/prisma/client"
 import { createBookingSchema, cancelBookingSchema } from "@/lib/schemas/booking"
 import type { CreateBookingInput } from "@/lib/schemas/booking"
 import { getAvailableSlots } from "@/lib/queries/bookings"
+import { createCalendarEvent, deleteCalendarEvent } from "@/lib/services/calendar"
 
 export async function createBooking(data: CreateBookingInput) {
   const parsed = createBookingSchema.safeParse(data)
@@ -105,10 +106,35 @@ export async function createBooking(data: CreateBookingInput) {
       }
     }
 
+    const booking = result.booking!
+
+    try {
+      const calendarResult = await createCalendarEvent({
+        userId: eventType.user.id,
+        summary: eventType.title,
+        description: `Meeting with ${parsed.data.guestName} (${parsed.data.guestEmail})${parsed.data.guestNotes ? `\n\nNotes: ${parsed.data.guestNotes}` : ""}`,
+        startTime,
+        endTime,
+        timezone: parsed.data.timezone,
+      })
+
+      if (calendarResult?.eventId) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: {
+            googleCalendarEventId: calendarResult.eventId,
+            googleCalendarId: calendarResult.calendarId,
+          },
+        })
+      }
+    } catch (calendarError) {
+      console.error("Failed to create Google Calendar event:", calendarError)
+    }
+
     revalidatePath("/dashboard/bookings")
     revalidatePath("/dashboard")
 
-    return { booking: result.booking }
+    return { booking }
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -167,6 +193,21 @@ export async function cancelBooking(id: string) {
     where: { id: parsed.data.id },
     data: { status: "CANCELLED" },
   })
+
+  if (booking.googleCalendarEventId) {
+    try {
+      await deleteCalendarEvent({
+        userId: session.user.id,
+        eventId: booking.googleCalendarEventId,
+        calendarId: booking.googleCalendarId ?? "primary",
+      })
+    } catch (calendarError) {
+      console.error(
+        "Failed to delete Google Calendar event:",
+        calendarError
+      )
+    }
+  }
 
   revalidatePath("/dashboard/bookings")
   revalidatePath("/dashboard")
