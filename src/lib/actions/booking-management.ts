@@ -1,5 +1,7 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
+
 import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getAvailableSlots } from "@/lib/queries/bookings"
@@ -15,7 +17,12 @@ import {
 } from "@/lib/services/email"
 
 type BookingWithUser = Prisma.BookingGetPayload<{
-  include: { eventType: { include: { user: true } } }
+  include: {
+    eventType: { include: { user: true } }
+    participants: true
+    calendarEvents: true
+    assignedUser: true
+  }
 }>
 
 type BookingResult =
@@ -25,7 +32,12 @@ type BookingResult =
 export async function getBookingByToken(token: string): Promise<BookingResult> {
   const booking = await prisma.booking.findUnique({
     where: { managementToken: token },
-    include: { eventType: { include: { user: true } } },
+    include: {
+      eventType: { include: { user: true } },
+      participants: true,
+      calendarEvents: true,
+      assignedUser: true,
+    },
   })
 
   if (!booking) {
@@ -69,18 +81,21 @@ export async function cancelBookingByToken(token: string) {
     data: { status: "CANCELLED" },
   })
 
-  if (booking.googleCalendarEventId) {
+  const eventsToDelete = booking.calendarEvents.length > 0
+    ? booking.calendarEvents
+    : booking.googleCalendarEventId
+      ? [{ userId: booking.userId, eventId: booking.googleCalendarEventId, calendarId: booking.googleCalendarId ?? "primary" }]
+      : []
+
+  for (const ce of eventsToDelete) {
     try {
       await deleteCalendarEvent({
-        userId: booking.userId,
-        eventId: booking.googleCalendarEventId,
-        calendarId: booking.googleCalendarId ?? "primary",
+        userId: ce.userId,
+        eventId: ce.eventId,
+        calendarId: ce.calendarId ?? "primary",
       })
     } catch (calendarError) {
-      console.error(
-        "Failed to delete Google Calendar event:",
-        calendarError
-      )
+      console.error("Failed to delete Google Calendar event:", calendarError)
     }
   }
 
@@ -153,15 +168,32 @@ export async function rescheduleBookingByToken(
   try {
     const txResult = await prisma.$transaction(
       async (tx) => {
-        const overlapping = await tx.booking.findMany({
-          where: {
-            eventTypeId: booking.eventTypeId,
-            status: "BOOKED",
-            id: { not: booking.id },
-            startTime: { lt: newEndTime },
-            endTime: { gt: newStartTime },
-          },
-        })
+        const schedulingType = booking.eventType.schedulingType
+
+        const overlapFilter: Record<string, unknown> = {
+          eventTypeId: booking.eventTypeId,
+          status: "BOOKED",
+          id: { not: booking.id },
+          startTime: { lt: newEndTime },
+          endTime: { gt: newStartTime },
+        }
+
+        if (schedulingType === "ROUND_ROBIN" && booking.assignedUserId) {
+          overlapFilter.OR = [
+            { userId: booking.assignedUserId },
+            { assignedUserId: booking.assignedUserId },
+          ]
+        } else if (schedulingType === "COLLECTIVE") {
+          const participantUserIds = booking.participants.map((p) => p.userId)
+          if (participantUserIds.length > 0) {
+            overlapFilter.OR = [
+              { userId: { in: participantUserIds } },
+              { assignedUserId: { in: participantUserIds } },
+            ]
+          }
+        }
+
+        const overlapping = await tx.booking.findMany({ where: overlapFilter })
 
         if (overlapping.length > 0) {
           return { conflict: true as const }
@@ -169,10 +201,7 @@ export async function rescheduleBookingByToken(
 
         await tx.booking.update({
           where: { id: booking.id },
-          data: {
-            startTime: newStartTime,
-            endTime: newEndTime,
-          },
+          data: { startTime: newStartTime, endTime: newEndTime },
         })
 
         return { conflict: false as const }
@@ -186,49 +215,80 @@ export async function rescheduleBookingByToken(
       return { ok: false, error: "unavailable" }
     }
 
-    if (booking.googleCalendarEventId) {
-      try {
-        await updateCalendarEvent({
-          userId: booking.userId,
-          eventId: booking.googleCalendarEventId,
-          calendarId: booking.googleCalendarId ?? "primary",
-          summary: booking.eventType.title,
-          description: `Meeting with ${booking.guestName} (${booking.guestEmail})${booking.guestNotes ? `\n\nNotes: ${booking.guestNotes}` : ""}`,
-          startTime: newStartTime,
-          endTime: newEndTime,
-          timezone: booking.timezone,
-        })
-      } catch (calendarError) {
-        console.error(
-          "Failed to update Google Calendar event:",
-          calendarError,
-        )
-      }
-    } else {
-      try {
-        const calendarResult = await createCalendarEvent({
-          userId: booking.userId,
-          summary: booking.eventType.title,
-          description: `Meeting with ${booking.guestName} (${booking.guestEmail})${booking.guestNotes ? `\n\nNotes: ${booking.guestNotes}` : ""}`,
-          startTime: newStartTime,
-          endTime: newEndTime,
-          timezone: booking.timezone,
-        })
+    const calendarUsers = booking.calendarEvents.length > 0
+      ? booking.calendarEvents.map((ce) => ({
+          userId: ce.userId,
+          eventId: ce.eventId,
+          calendarId: ce.calendarId ?? "primary",
+        }))
+      : booking.assignedUserId
+        ? [{ userId: booking.assignedUserId, eventId: booking.googleCalendarEventId, calendarId: booking.googleCalendarId ?? "primary" }]
+        : [{ userId: booking.userId, eventId: booking.googleCalendarEventId, calendarId: booking.googleCalendarId ?? "primary" }]
 
-        if (calendarResult?.eventId) {
-          await prisma.booking.update({
-            where: { id: booking.id },
-            data: {
-              googleCalendarEventId: calendarResult.eventId,
-              googleCalendarId: calendarResult.calendarId,
-            },
+    console.log("[rescheduleBookingByToken] Calendar update start", {
+      bookingId: booking.id,
+      assignedUserId: booking.assignedUserId,
+      calendarUsers: calendarUsers.map((c) => ({ userId: c.userId, eventId: c.eventId, calendarId: c.calendarId })),
+      startTime: newStartTime.toISOString(),
+      endTime: newEndTime.toISOString(),
+    })
+
+    let meetingUrl: string | null = booking.meetingUrl
+
+    for (const cal of calendarUsers) {
+      if (cal.eventId) {
+        try {
+          await updateCalendarEvent({
+            userId: cal.userId,
+            eventId: cal.eventId,
+            calendarId: cal.calendarId,
+            summary: booking.eventType.title,
+            description: `Meeting with ${booking.guestName} (${booking.guestEmail})${booking.guestNotes ? `\n\nNotes: ${booking.guestNotes}` : ""}`,
+            startTime: newStartTime,
+            endTime: newEndTime,
+            timezone: booking.timezone,
           })
+        } catch (calendarError) {
+          console.error("Failed to update calendar event:", calendarError)
         }
-      } catch (calendarError) {
-        console.error(
-          "Failed to create Google Calendar event:",
-          calendarError,
-        )
+      } else {
+        try {
+          const calResult = await createCalendarEvent({
+            userId: cal.userId,
+            summary: booking.eventType.title,
+            description: `Meeting with ${booking.guestName} (${booking.guestEmail})${booking.guestNotes ? `\n\nNotes: ${booking.guestNotes}` : ""}`,
+            startTime: newStartTime,
+            endTime: newEndTime,
+            timezone: booking.timezone,
+          })
+
+          if (calResult?.eventId) {
+            await prisma.calendarEvent.create({
+              data: {
+                bookingId: booking.id,
+                userId: cal.userId,
+                eventId: calResult.eventId,
+                calendarId: calResult.calendarId ?? "primary",
+              },
+            })
+
+            if (cal.userId === (booking.assignedUserId ?? booking.userId)) {
+              await prisma.booking.update({
+                where: { id: booking.id },
+                data: {
+                  googleCalendarEventId: calResult.eventId,
+                  googleCalendarId: calResult.calendarId,
+                  meetingUrl: calResult.meetUrl ?? null,
+                  meetingProvider: calResult.meetUrl ? "GOOGLE_MEET" : null,
+                },
+              })
+            }
+
+            if (calResult.meetUrl) meetingUrl = calResult.meetUrl
+          }
+        } catch (calendarError) {
+          console.error("Failed to create calendar event:", calendarError)
+        }
       }
     }
 
@@ -238,7 +298,7 @@ export async function rescheduleBookingByToken(
       await sendRescheduleConfirmation(
         {
           eventTitle: booking.eventType.title,
-          hostName: booking.eventType.user.name ?? booking.eventType.user.email,
+          hostName: booking.assignedUser?.name ?? booking.eventType.user.name ?? booking.eventType.user.email,
           guestName: booking.guestName,
           guestEmail: booking.guestEmail,
           date: newStartTime,
@@ -248,6 +308,7 @@ export async function rescheduleBookingByToken(
           duration: booking.eventType.duration,
           description: booking.eventType.description,
           managementUrl,
+          meetingUrl,
         },
         booking.eventType.user.email,
         booking.guestEmail,
@@ -258,6 +319,10 @@ export async function rescheduleBookingByToken(
         emailError,
       )
     }
+
+    revalidatePath("/dashboard/bookings")
+    revalidatePath("/dashboard")
+    revalidatePath(`/booking/manage/${token}`)
 
     return { ok: true, rescheduled: true as const }
   } catch (error) {

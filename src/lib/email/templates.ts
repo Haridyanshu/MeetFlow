@@ -65,6 +65,7 @@ export interface ConfirmationTemplateData {
   duration: number
   description: string | null
   managementUrl: string | null
+  meetingUrl: string | null
 }
 
 export function bookingConfirmationHtml(data: ConfirmationTemplateData): string {
@@ -92,6 +93,22 @@ export function bookingConfirmationHtml(data: ConfirmationTemplateData): string 
     )
     .join("")
 
+  const meetButton = data.meetingUrl
+    ? `
+    <table role="presentation" style="width:100%;margin-top:24px">
+      <tr>
+        <td align="center">
+          <a href="${data.meetingUrl}" style="display:inline-block;padding:12px 24px;background-color:#1a73e8;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">Join Google Meet</a>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-top:8px">
+          <span style="font-size:13px;color:#64748b">${data.meetingUrl}</span>
+        </td>
+      </tr>
+    </table>`
+    : ""
+
   const manageButton = data.managementUrl
     ? `
     <table role="presentation" style="width:100%;margin-top:24px">
@@ -109,6 +126,7 @@ export function bookingConfirmationHtml(data: ConfirmationTemplateData): string 
     <table role="presentation" style="width:100%;border-collapse:collapse">
       ${rows}
     </table>
+    ${meetButton}
     ${manageButton}
   `)
 }

@@ -112,12 +112,26 @@ export async function createCalendarEvent({
 
   const response = await calendar.events.insert({
     calendarId,
-    requestBody: event,
+    requestBody: {
+      ...event,
+      conferenceData: {
+        createRequest: {
+          requestId: `${startTime.getTime()}-${userId}`,
+        },
+      },
+    },
+    conferenceDataVersion: 1,
   })
+
+  const meetUrl =
+    response.data.conferenceData?.entryPoints?.find(
+      (ep) => ep.entryPointType === "video",
+    )?.uri ?? null
 
   return {
     eventId: response.data.id ?? null,
     calendarId,
+    meetUrl,
   }
 }
 
@@ -140,8 +154,33 @@ export async function updateCalendarEvent({
   endTime?: Date
   timezone?: string
 }) {
+  console.log("[updateCalendarEvent] Starting", {
+    userId,
+    eventId,
+    calendarId,
+    summary,
+    startTime: startTime?.toISOString(),
+    endTime: endTime?.toISOString(),
+    timezone,
+  })
+
   const auth = await getGoogleClient(userId)
-  if (!auth) return
+  if (!auth) {
+    const reason = await (async () => {
+      const account = await prisma.account.findFirst({
+        where: { userId, provider: "google" },
+      })
+      if (!account) return "No Google account found for userId"
+      if (!account.access_token) return "Access token is missing"
+      if (!account.refresh_token) return "Refresh token is missing"
+      return "Unknown reason — account exists but auth is null"
+    })()
+    console.error("[updateCalendarEvent] getGoogleClient returned null", {
+      userId,
+      reason,
+    })
+    return
+  }
 
   const calendar = google.calendar({ version: "v3", auth })
 
@@ -159,11 +198,27 @@ export async function updateCalendarEvent({
     }
   }
 
-  await calendar.events.update({
-    calendarId,
-    eventId,
-    requestBody,
-  })
+  try {
+    const response = await calendar.events.patch({
+      calendarId,
+      eventId,
+      requestBody,
+    })
+    console.log("[updateCalendarEvent] Success", {
+      userId,
+      eventId,
+      status: response.status,
+      updatedStart: response.data.start?.dateTime,
+      updatedEnd: response.data.end?.dateTime,
+    })
+  } catch (apiError) {
+    console.error("[updateCalendarEvent] Google API error", {
+      userId,
+      eventId,
+      calendarId,
+      error: apiError instanceof Error ? { message: apiError.message, stack: apiError.stack } : apiError,
+    })
+  }
 }
 
 export async function deleteCalendarEvent({

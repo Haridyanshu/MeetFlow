@@ -1,11 +1,15 @@
 import { auth } from "@/lib/auth"
 import { getEventTypesByUserId } from "@/lib/queries/event-types"
+import { getTeamsByOwner } from "@/lib/queries/teams"
 import { EventTypesList } from "@/components/event-types/event-types-list"
 import { CreateEventTypeButton } from "@/components/event-types/event-type-form"
 
 export default async function EventTypesPage() {
   const session = await auth()
-  const eventTypes = await getEventTypesByUserId(session!.user.id)
+  const [eventTypes, teams] = await Promise.all([
+    getEventTypesByUserId(session!.user.id),
+    getTeamsByOwner(session!.user.id),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -16,11 +20,9 @@ export default async function EventTypesPage() {
             Create and manage your event types for scheduling.
           </p>
         </div>
-        <div className="hidden sm:block">
-          <CreateEventTypeButton />
-        </div>
+        <CreateEventTypeButton teams={teams} />
       </div>
-      <EventTypesList eventTypes={eventTypes} />
+      <EventTypesList eventTypes={eventTypes} teams={teams} />
     </div>
   )
 }

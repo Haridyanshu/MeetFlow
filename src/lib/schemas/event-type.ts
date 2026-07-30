@@ -55,6 +55,8 @@ export const createEventTypeSchema = z.object({
     .min(0, "Weekly limit cannot be negative")
     .max(1000, "Weekly limit must be at most 1000")
     .optional(),
+  schedulingType: z.enum(["INDIVIDUAL", "ROUND_ROBIN", "COLLECTIVE"]).optional(),
+  teamId: z.string().optional(),
 })
 
 export const updateEventTypeSchema = createEventTypeSchema.partial().extend({

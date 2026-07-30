@@ -23,12 +23,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
+interface TeamOption {
+  id: string
+  name: string
+}
+
 interface EventTypeFormProps {
   mode: "create" | "edit"
   defaultValues?: Partial<CreateEventTypeInput> & { id?: string }
   children?: React.ReactNode
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  teams?: TeamOption[]
 }
 
 export function EventTypeForm({
@@ -37,6 +43,7 @@ export function EventTypeForm({
   children,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  teams,
 }: EventTypeFormProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
@@ -67,6 +74,8 @@ export function EventTypeForm({
       maximumAdvanceDays: 30,
       maximumBookingsPerDay: 0,
       maximumBookingsPerWeek: 0,
+      schedulingType: "INDIVIDUAL",
+      teamId: "",
       ...defaultValues,
     },
   })
@@ -87,6 +96,8 @@ export function EventTypeForm({
       formData.set("maximumAdvanceDays", String(data.maximumAdvanceDays ?? 30))
       formData.set("maximumBookingsPerDay", String(data.maximumBookingsPerDay ?? 0))
       formData.set("maximumBookingsPerWeek", String(data.maximumBookingsPerWeek ?? 0))
+      formData.set("schedulingType", data.schedulingType ?? "INDIVIDUAL")
+      if (data.teamId) formData.set("teamId", data.teamId)
 
       let result: { errors?: Record<string, string[]> } | undefined
 
@@ -302,6 +313,39 @@ export function EventTypeForm({
                 )}
               </div>
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="schedulingType">Scheduling type</Label>
+              <select
+                id="schedulingType"
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                {...register("schedulingType")}
+              >
+                <option value="INDIVIDUAL">Individual</option>
+                <option value="ROUND_ROBIN">Round Robin</option>
+                <option value="COLLECTIVE">Collective</option>
+              </select>
+              {errors.schedulingType && (
+                <p className="text-xs text-destructive">{errors.schedulingType.message}</p>
+              )}
+            </div>
+            {teams && teams.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="teamId">Team</Label>
+                <select
+                  id="teamId"
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  {...register("teamId")}
+                >
+                  <option value="">No team</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                {errors.teamId && (
+                  <p className="text-xs text-destructive">{errors.teamId.message}</p>
+                )}
+              </div>
+            )}
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -332,9 +376,9 @@ export function EventTypeForm({
   )
 }
 
-export function CreateEventTypeButton() {
+export function CreateEventTypeButton({ teams }: { teams?: TeamOption[] }) {
   return (
-    <EventTypeForm mode="create">
+    <EventTypeForm mode="create" teams={teams}>
       <Button>Create event type</Button>
     </EventTypeForm>
   )

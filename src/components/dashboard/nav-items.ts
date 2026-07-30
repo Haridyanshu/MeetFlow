@@ -3,6 +3,7 @@ import {
   CalendarPlusIcon,
   ClockIcon,
   CalendarCheckIcon,
+  UsersIcon,
   PuzzleIcon,
   SettingsIcon,
 } from "lucide-react"
@@ -33,6 +34,11 @@ export const navItems: NavItem[] = [
     title: "Bookings",
     href: "/dashboard/bookings",
     icon: CalendarCheckIcon,
+  },
+  {
+    title: "Teams",
+    href: "/dashboard/teams",
+    icon: UsersIcon,
   },
   {
     title: "Integrations",

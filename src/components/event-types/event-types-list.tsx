@@ -4,7 +4,6 @@ import { CalendarPlusIcon } from "lucide-react"
 
 import { EmptyState } from "@/components/ui/empty-state"
 import { EventTypeCard } from "@/components/event-types/event-type-card"
-import { CreateEventTypeButton } from "@/components/event-types/event-type-form"
 
 interface EventType {
   id: string
@@ -18,30 +17,37 @@ interface EventType {
   requiresConfirmation: boolean
   bufferBefore: number
   bufferAfter: number
+  minimumNotice: number
+  maximumAdvanceDays: number
+  maximumBookingsPerDay: number
+  maximumBookingsPerWeek: number
+  schedulingType: string
+  teamId: string | null
 }
 
-export function EventTypesList({ eventTypes }: { eventTypes: EventType[] }) {
+interface TeamOption {
+  id: string
+  name: string
+}
+
+export function EventTypesList({ eventTypes, teams }: { eventTypes: EventType[]; teams?: TeamOption[] }) {
   if (eventTypes.length === 0) {
     return (
       <EmptyState
         icon={<CalendarPlusIcon />}
         title="No event types yet"
         description="Create your first event type to start scheduling meetings."
-        action={<CreateEventTypeButton />}
       />
     )
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {eventTypes.length} event type{eventTypes.length !== 1 ? "s" : ""}
-        </p>
-        <CreateEventTypeButton />
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {eventTypes.length} event type{eventTypes.length !== 1 ? "s" : ""}
+      </p>
       {eventTypes.map((eventType) => (
-        <EventTypeCard key={eventType.id} eventType={eventType} />
+        <EventTypeCard key={eventType.id} eventType={eventType} teams={teams} />
       ))}
     </div>
   )

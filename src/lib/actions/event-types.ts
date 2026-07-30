@@ -32,6 +32,13 @@ export async function createEventType(formData: FormData) {
     return { errors: parsed.error.flatten().fieldErrors }
   }
 
+  if (parsed.data.teamId) {
+    const team = await prisma.team.findUnique({ where: { id: parsed.data.teamId } })
+    if (!team || team.ownerId !== session.user.id) {
+      return { errors: { teamId: ["Invalid team."] } }
+    }
+  }
+
   const existing = await prisma.eventType.findUnique({
     where: { userId_slug: { userId: session.user.id, slug: parsed.data.slug } },
   })
@@ -47,6 +54,7 @@ export async function createEventType(formData: FormData) {
   await prisma.eventType.create({
     data: {
       ...parsed.data,
+      schedulingType: parsed.data.schedulingType ?? "INDIVIDUAL",
       userId: session.user.id,
     },
   })
@@ -83,6 +91,13 @@ export async function updateEventType(id: string, formData: FormData) {
 
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors }
+  }
+
+  if (parsed.data.teamId && parsed.data.teamId !== eventType.teamId) {
+    const team = await prisma.team.findUnique({ where: { id: parsed.data.teamId } })
+    if (!team || team.ownerId !== session.user.id) {
+      return { errors: { teamId: ["Invalid team."] } }
+    }
   }
 
   if (parsed.data.slug && parsed.data.slug !== eventType.slug) {

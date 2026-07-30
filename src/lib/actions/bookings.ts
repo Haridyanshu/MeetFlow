@@ -12,6 +12,7 @@ import { validateBookingCreation, checkBookingWindow, checkDailyLimit, checkWeek
 import type { NoSlotsReason } from "@/lib/validation/booking-rules"
 import crypto from "crypto"
 
+import { pickRoundRobinMember } from "@/lib/queries/bookings"
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/services/calendar"
 import {
   sendBookingConfirmation,
@@ -35,7 +36,7 @@ export async function createBooking(data: CreateBookingInput) {
 
   const eventType = await prisma.eventType.findUnique({
     where: { id: parsed.data.eventTypeId },
-    include: { user: true },
+    include: { user: true, team: { include: { members: true } } },
   })
 
   if (!eventType) {
@@ -58,10 +59,7 @@ export async function createBooking(data: CreateBookingInput) {
   }
 
   const dateStr = startTime.toISOString().split("T")[0]
-  const availableSlots = await getAvailableSlots(
-    parsed.data.eventTypeId,
-    dateStr
-  )
+  const availableSlots = await getAvailableSlots(parsed.data.eventTypeId, dateStr)
 
   const slotKey = (d: Date) => d.toISOString()
   const isValid = availableSlots.some(
@@ -76,26 +74,61 @@ export async function createBooking(data: CreateBookingInput) {
     }
   }
 
+  let assignedUserId: string | null = null
+  let participantIds: string[] = []
+
+  if (eventType.schedulingType === "ROUND_ROBIN" && eventType.team) {
+    assignedUserId = await pickRoundRobinMember(eventType.id, startTime, endTime)
+    if (!assignedUserId) {
+      return {
+        errors: { startTime: ["This time slot is no longer available"] },
+      }
+    }
+  } else if (eventType.schedulingType === "COLLECTIVE" && eventType.team) {
+    participantIds = eventType.team.members.map((m) => m.userId)
+  }
+
   try {
     const result = await prisma.$transaction(
       async (tx) => {
-        const overlapping = await tx.booking.findMany({
-          where: {
-            eventTypeId: parsed.data.eventTypeId,
-            status: "BOOKED",
-            startTime: { lt: endTime },
-            endTime: { gt: startTime },
-          },
-        })
-
-        if (overlapping.length > 0) {
-          return { conflict: true }
+        if (eventType.schedulingType === "ROUND_ROBIN" && assignedUserId) {
+          const overlapping = await tx.booking.findMany({
+            where: {
+              eventTypeId: parsed.data.eventTypeId,
+              status: "BOOKED",
+              startTime: { lt: endTime },
+              endTime: { gt: startTime },
+              OR: [
+                { userId: assignedUserId },
+                { assignedUserId },
+              ],
+            },
+          })
+          if (overlapping.length > 0) return { conflict: true }
+        } else if (eventType.schedulingType === "COLLECTIVE") {
+          const overlapping = await tx.booking.findMany({
+            where: {
+              eventTypeId: parsed.data.eventTypeId,
+              status: "BOOKED",
+              startTime: { lt: endTime },
+              endTime: { gt: startTime },
+            },
+          })
+          if (overlapping.length > 0) return { conflict: true }
+        } else {
+          const overlapping = await tx.booking.findMany({
+            where: {
+              eventTypeId: parsed.data.eventTypeId,
+              status: "BOOKED",
+              startTime: { lt: endTime },
+              endTime: { gt: startTime },
+            },
+          })
+          if (overlapping.length > 0) return { conflict: true }
         }
 
         const managementToken = crypto.randomUUID()
-        const managementTokenExpiresAt = new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000
-        )
+        const managementTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
         const booking = await tx.booking.create({
           data: {
@@ -110,6 +143,10 @@ export async function createBooking(data: CreateBookingInput) {
             status: "BOOKED",
             managementToken,
             managementTokenExpiresAt,
+            assignedUserId,
+            participants: participantIds.length > 0
+              ? { create: participantIds.map((uid) => ({ userId: uid })) }
+              : undefined,
           },
         })
 
@@ -122,46 +159,81 @@ export async function createBooking(data: CreateBookingInput) {
 
     if (result.conflict) {
       return {
-        errors: {
-          startTime: ["This time slot is no longer available"],
-        },
+        errors: { startTime: ["This time slot is no longer available"] },
       }
     }
 
     const booking = result.booking!
 
-    try {
-      const calendarResult = await createCalendarEvent({
-        userId: eventType.user.id,
-        summary: eventType.title,
-        description: `Meeting with ${parsed.data.guestName} (${parsed.data.guestEmail})${parsed.data.guestNotes ? `\n\nNotes: ${parsed.data.guestNotes}` : ""}`,
-        startTime,
-        endTime,
-        timezone: parsed.data.timezone,
-      })
+    const calendarUsers = eventType.schedulingType === "COLLECTIVE"
+      ? participantIds
+      : assignedUserId
+        ? [assignedUserId]
+        : [eventType.user.id]
 
-      if (calendarResult?.eventId) {
-        await prisma.booking.update({
-          where: { id: booking.id },
-          data: {
-            googleCalendarEventId: calendarResult.eventId,
-            googleCalendarId: calendarResult.calendarId,
-          },
+    let meetingUrl: string | null = null
+    let hostEventId: string | null = null
+    let hostCalendarId: string | null = null
+
+    for (const uid of calendarUsers) {
+      try {
+        const calResult = await createCalendarEvent({
+          userId: uid,
+          summary: eventType.title,
+          description: `Meeting with ${parsed.data.guestName} (${parsed.data.guestEmail})${parsed.data.guestNotes ? `\n\nNotes: ${parsed.data.guestNotes}` : ""}`,
+          startTime,
+          endTime,
+          timezone: parsed.data.timezone,
         })
+
+        if (calResult?.meetUrl && !meetingUrl) meetingUrl = calResult.meetUrl
+
+        if (calResult?.eventId) {
+          if (uid === (assignedUserId ?? eventType.user.id)) {
+            hostEventId = calResult.eventId
+            hostCalendarId = calResult.calendarId ?? "primary"
+          }
+          await prisma.calendarEvent.create({
+            data: {
+              bookingId: booking.id,
+              userId: uid,
+              eventId: calResult.eventId,
+              calendarId: calResult.calendarId ?? "primary",
+            },
+          })
+        }
+      } catch (calError) {
+        console.error(`Failed to create calendar event for user ${uid}:`, calError)
       }
-    } catch (calendarError) {
-      console.error("Failed to create Google Calendar event:", calendarError)
+    }
+
+    if (hostEventId) {
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          googleCalendarEventId: hostEventId,
+          googleCalendarId: hostCalendarId,
+          meetingUrl,
+          meetingProvider: meetingUrl ? "GOOGLE_MEET" : null,
+        },
+      })
     }
 
     const managementUrl = booking.managementToken
       ? `${process.env.AUTH_URL ?? "http://localhost:3000"}/booking/manage/${booking.managementToken}`
       : null
 
+    let hostName = eventType.user.name ?? eventType.user.email
+    if (assignedUserId) {
+      const assignedUser = await prisma.user.findUnique({ where: { id: assignedUserId } })
+      if (assignedUser) hostName = assignedUser.name ?? assignedUser.email
+    }
+
     try {
       await sendBookingConfirmation(
         {
           eventTitle: eventType.title,
-          hostName: eventType.user.name ?? eventType.user.email,
+          hostName,
           guestName: parsed.data.guestName,
           guestEmail: parsed.data.guestEmail,
           date: startTime,
@@ -171,6 +243,7 @@ export async function createBooking(data: CreateBookingInput) {
           duration: eventType.duration,
           description: eventType.description,
           managementUrl,
+          meetingUrl,
         },
         eventType.user.email,
       )
@@ -189,9 +262,7 @@ export async function createBooking(data: CreateBookingInput) {
     ) {
       return {
         errors: {
-          startTime: [
-            "This time slot is no longer available (conflict detected). Please try again.",
-          ],
+          startTime: ["This time slot is no longer available (conflict detected). Please try again."],
         },
       }
     }
@@ -259,7 +330,10 @@ export async function cancelBooking(id: string) {
 
   const booking = await prisma.booking.findUnique({
     where: { id: parsed.data.id },
-    include: { eventType: { include: { user: true } } },
+    include: {
+      eventType: { include: { user: true } },
+      calendarEvents: true,
+    },
   })
 
   if (!booking || booking.eventType.userId !== session.user.id) {
@@ -277,18 +351,21 @@ export async function cancelBooking(id: string) {
     data: { status: "CANCELLED" },
   })
 
-  if (booking.googleCalendarEventId) {
+  const eventsToDelete = booking.calendarEvents.length > 0
+    ? booking.calendarEvents
+    : booking.googleCalendarEventId
+      ? [{ userId: booking.userId, eventId: booking.googleCalendarEventId, calendarId: booking.googleCalendarId ?? "primary" }]
+      : []
+
+  for (const ce of eventsToDelete) {
     try {
       await deleteCalendarEvent({
-        userId: session.user.id,
-        eventId: booking.googleCalendarEventId,
-        calendarId: booking.googleCalendarId ?? "primary",
+        userId: ce.userId,
+        eventId: ce.eventId,
+        calendarId: ce.calendarId ?? "primary",
       })
     } catch (calendarError) {
-      console.error(
-        "Failed to delete Google Calendar event:",
-        calendarError
-      )
+      console.error("Failed to delete Google Calendar event:", calendarError)
     }
   }
 

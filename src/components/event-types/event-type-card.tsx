@@ -39,10 +39,17 @@ interface EventTypeCardProps {
     requiresConfirmation: boolean
     bufferBefore: number
     bufferAfter: number
+    minimumNotice: number
+    maximumAdvanceDays: number
+    maximumBookingsPerDay: number
+    maximumBookingsPerWeek: number
+    schedulingType: string
+    teamId: string | null
   }
+  teams?: { id: string; name: string }[]
 }
 
-export function EventTypeCard({ eventType }: EventTypeCardProps) {
+export function EventTypeCard({ eventType, teams }: EventTypeCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -63,6 +70,7 @@ export function EventTypeCard({ eventType }: EventTypeCardProps) {
         mode="edit"
         open={editOpen}
         onOpenChange={setEditOpen}
+        teams={teams}
         defaultValues={{
           id: eventType.id,
           title: eventType.title,
@@ -74,6 +82,12 @@ export function EventTypeCard({ eventType }: EventTypeCardProps) {
           requiresConfirmation: eventType.requiresConfirmation,
           bufferBefore: eventType.bufferBefore,
           bufferAfter: eventType.bufferAfter,
+          minimumNotice: eventType.minimumNotice,
+          maximumAdvanceDays: eventType.maximumAdvanceDays,
+          maximumBookingsPerDay: eventType.maximumBookingsPerDay,
+          maximumBookingsPerWeek: eventType.maximumBookingsPerWeek,
+          schedulingType: eventType.schedulingType as "INDIVIDUAL" | "ROUND_ROBIN" | "COLLECTIVE",
+          teamId: eventType.teamId ?? "",
         }}
       />
       <DeleteDialog
@@ -160,6 +174,16 @@ export function EventTypeCard({ eventType }: EventTypeCardProps) {
             {(eventType.bufferBefore > 0 || eventType.bufferAfter > 0) && (
               <span className="text-xs">
                 Buffer: {eventType.bufferBefore}min before / {eventType.bufferAfter}min after
+              </span>
+            )}
+            {eventType.schedulingType && eventType.schedulingType !== "INDIVIDUAL" && (
+              <Badge variant="outline" className="text-[10px]">
+                {eventType.schedulingType === "ROUND_ROBIN" ? "Round Robin" : "Collective"}
+              </Badge>
+            )}
+            {eventType.teamId && teams && (
+              <span className="text-xs text-muted-foreground">
+                Team: {teams.find((t) => t.id === eventType.teamId)?.name ?? eventType.teamId}
               </span>
             )}
           </div>

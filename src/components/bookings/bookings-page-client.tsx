@@ -6,6 +6,7 @@ import {
   CalendarIcon,
   ClockIcon,
   Loader2Icon,
+  VideoIcon,
   XCircleIcon,
 } from "lucide-react"
 
@@ -25,6 +26,9 @@ interface Booking {
   guestNotes: string | null
   timezone: string
   status: string
+  meetingUrl: string | null
+  meetingProvider: string | null
+  assignedUser?: { id: string; name: string | null; email: string } | null
   eventType: {
     id: string
     title: string
@@ -83,16 +87,24 @@ function BookingCard({
           <div className="flex flex-col gap-1">
             <CardTitle>{booking.eventType.title}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              with {booking.guestName} ({booking.guestEmail})
+              {booking.assignedUser ? `with ${booking.assignedUser.name ?? booking.assignedUser.email}` : `with ${booking.guestName} (${booking.guestEmail})`}
             </p>
           </div>
-          <Badge variant={isPast ? "secondary" : "success"}>
-            {isPast ? "Completed" : "Confirmed"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {booking.meetingProvider && (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <VideoIcon className="size-3" />
+                Google Meet
+              </Badge>
+            )}
+            <Badge variant={isPast ? "secondary" : "success"}>
+              {isPast ? "Completed" : "Confirmed"}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <CalendarIcon className="size-3.5" />
             {formatDate(booking.startTime)}
@@ -105,6 +117,19 @@ function BookingCard({
           <span className="inline-flex items-center gap-1">
             {booking.eventType.duration} min
           </span>
+          {booking.meetingUrl && (
+            <span className="inline-flex items-center gap-1">
+              <a
+                href={booking.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-xs font-medium hover:bg-muted hover:text-foreground h-6 gap-1 px-2"
+              >
+                <VideoIcon className="size-3" />
+                Join
+              </a>
+            </span>
+          )}
           {!isPast && (
             <Button
               variant="destructive"

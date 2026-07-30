@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   ClockIcon,
   Loader2Icon,
+  VideoIcon,
   XCircleIcon,
 } from "lucide-react"
 
@@ -32,6 +33,9 @@ export interface BookingData {
   guestNotes: string | null
   timezone: string
   status: string
+  meetingUrl: string | null
+  meetingProvider: string | null
+  assignedUser?: { id: string; name: string | null; email: string } | null
   eventType: {
     id: string
     title: string
@@ -244,8 +248,28 @@ export function ManageBookingClient({
               </div>
               <div className="text-muted-foreground">
                 Host:{" "}
-                {booking.eventType.user.name ?? booking.eventType.user.email}
+                {booking.assignedUser
+                  ? (booking.assignedUser.name ?? booking.assignedUser.email)
+                  : (booking.eventType.user.name ?? booking.eventType.user.email)}
               </div>
+              {booking.meetingUrl && (
+                <div className="flex items-center gap-2">
+                  <VideoIcon className="size-4 shrink-0 text-emerald-600" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-emerald-600">
+                      Google Meet
+                    </span>
+                    <a
+                      href={booking.meetingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-xs font-medium hover:bg-muted hover:text-foreground h-6 gap-1 px-2"
+                    >
+                      Join Meeting
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

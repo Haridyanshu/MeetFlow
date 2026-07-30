@@ -8,6 +8,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SchedulingType {
+  INDIVIDUAL
+  ROUND_ROBIN
+  COLLECTIVE
+}
+
+enum TeamMemberRole {
+  OWNER
+  MEMBER
+}
+
 model User {
   id                 String               @id @default(cuid())
   name               String?
@@ -19,34 +30,146 @@ model User {
   accounts           Account[]
   sessions           Session[]
   eventTypes         EventType[]
-  bookings           Booking[]
+  bookings           Booking[]              @relation("BookingOwner")
+  assignedBookings   Booking[]              @relation("BookingAssignee")
   weeklyAvailability WeeklyAvailability?
   dateOverrides      DateOverride[]
+  ownedTeams         Team[]               @relation("TeamOwner")
+  teamMemberships    TeamMember[]
+  calendarEvents     CalendarEvent[]
+  bookingParticipants BookingParticipant[]
+}
+
+model Team {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String
+  ownerId     String
+  owner       User             @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  eventTypes  EventType[]
+  invitations TeamInvitation[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([ownerId, slug])
+}
+
+model TeamMember {
+  id        String         @id @default(cuid())
+  teamId    String
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      TeamMemberRole @default(MEMBER)
+  createdAt DateTime       @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model TeamInvitation {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+  @@index([email])
+}
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
 }
 
 model EventType {
-  id                  String   @id @default(cuid())
+  id                  String         @id @default(cuid())
   title               String
   slug                String
   description         String?
   duration            Int
   color               String?
   location            String?
-  isActive            Boolean  @default(true)
-  requiresConfirmation Boolean @default(true)
-  bufferBefore        Int      @default(0)
-  bufferAfter         Int      @default(0)
-  minimumNotice       Int      @default(0)
-  maximumAdvanceDays  Int      @default(30)
-  maximumBookingsPerDay Int    @default(0)
-  maximumBookingsPerWeek Int   @default(0)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  isActive            Boolean        @default(true)
+  requiresConfirmation Boolean       @default(true)
+  schedulingType      SchedulingType @default(INDIVIDUAL)
+  bufferBefore        Int            @default(0)
+  bufferAfter         Int            @default(0)
+  minimumNotice       Int            @default(0)
+  maximumAdvanceDays  Int            @default(30)
+  maximumBookingsPerDay Int          @default(0)
+  maximumBookingsPerWeek Int         @default(0)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
   userId              String
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId              String?
+  team                Team?          @relation(fields: [teamId], references: [id])
   bookings            Booking[]
 
   @@unique([userId, slug])
+  @@index([teamId])
+}
+
+model Booking {
+  id                      String              @id @default(cuid())
+  userId                  String
+  user                    User                @relation("BookingOwner", fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId             String
+  eventType               EventType           @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  guestName               String
+  guestEmail              String
+  guestNotes              String?
+  startTime               DateTime
+  endTime                 DateTime
+  timezone                String
+  status                  BookingStatus       @default(BOOKED)
+  assignedUserId          String?
+  assignedUser            User?               @relation("BookingAssignee", fields: [assignedUserId], references: [id])
+  googleCalendarEventId   String?
+  googleCalendarId        String?
+  managementToken         String?             @unique
+  managementTokenExpiresAt DateTime?
+  meetingUrl              String?
+  meetingProvider         String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  participants            BookingParticipant[]
+  calendarEvents          CalendarEvent[]
+
+  @@index([eventTypeId, startTime, status])
+  @@index([userId, status])
+  @@index([assignedUserId, status])
+  @@index([startTime])
+}
+
+model BookingParticipant {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([bookingId, userId])
+  @@index([userId])
+}
+
+model CalendarEvent {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  eventId    String
+  calendarId String?
+  createdAt  DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([userId])
 }
 
 model Account {
@@ -117,34 +240,4 @@ model DateOverride {
 
   @@unique([userId, date])
   @@index([userId, date])
-}
-
-enum BookingStatus {
-  BOOKED
-  CANCELLED
-}
-
-model Booking {
-  id                      String         @id @default(cuid())
-  userId                  String
-  user                    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventTypeId             String
-  eventType               EventType      @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
-  guestName               String
-  guestEmail              String
-  guestNotes              String?
-  startTime               DateTime
-  endTime                 DateTime
-  timezone                String
-  status                  BookingStatus  @default(BOOKED)
-  googleCalendarEventId   String?
-  googleCalendarId        String?
-  managementToken         String?        @unique
-  managementTokenExpiresAt DateTime?
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
-
-  @@index([eventTypeId, startTime, status])
-  @@index([userId, status])
-  @@index([startTime])
 }
