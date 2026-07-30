@@ -64,6 +64,7 @@ export interface ConfirmationTemplateData {
   timezone: string
   duration: number
   description: string | null
+  managementUrl: string | null
 }
 
 export function bookingConfirmationHtml(data: ConfirmationTemplateData): string {
@@ -91,12 +92,24 @@ export function bookingConfirmationHtml(data: ConfirmationTemplateData): string 
     )
     .join("")
 
+  const manageButton = data.managementUrl
+    ? `
+    <table role="presentation" style="width:100%;margin-top:24px">
+      <tr>
+        <td align="center">
+          <a href="${data.managementUrl}" style="display:inline-block;padding:12px 24px;background-color:#1a1a2e;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">Manage Booking</a>
+        </td>
+      </tr>
+    </table>`
+    : ""
+
   return baseHtml(`
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:600;color:#1a1a2e">Booking Confirmed</h2>
     <p style="margin:0 0 20px;color:#475569">Your meeting has been scheduled.</p>
     <table role="presentation" style="width:100%;border-collapse:collapse">
       ${rows}
     </table>
+    ${manageButton}
   `)
 }
 

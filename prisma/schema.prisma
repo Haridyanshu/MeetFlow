@@ -36,6 +36,10 @@ model EventType {
   requiresConfirmation Boolean @default(true)
   bufferBefore        Int      @default(0)
   bufferAfter         Int      @default(0)
+  minimumNotice       Int      @default(0)
+  maximumAdvanceDays  Int      @default(30)
+  maximumBookingsPerDay Int    @default(0)
+  maximumBookingsPerWeek Int   @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   userId              String
@@ -121,22 +125,24 @@ enum BookingStatus {
 }
 
 model Booking {
-  id                    String         @id @default(cuid())
-  userId                String
-  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventTypeId           String
-  eventType             EventType      @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
-  guestName             String
-  guestEmail            String
-  guestNotes            String?
-  startTime             DateTime
-  endTime               DateTime
-  timezone              String
-  status                BookingStatus  @default(BOOKED)
-  googleCalendarEventId String?
-  googleCalendarId      String?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  id                      String         @id @default(cuid())
+  userId                  String
+  user                    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId             String
+  eventType               EventType      @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  guestName               String
+  guestEmail              String
+  guestNotes              String?
+  startTime               DateTime
+  endTime                 DateTime
+  timezone                String
+  status                  BookingStatus  @default(BOOKED)
+  googleCalendarEventId   String?
+  googleCalendarId        String?
+  managementToken         String?        @unique
+  managementTokenExpiresAt DateTime?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
 
   @@index([eventTypeId, startTime, status])
   @@index([userId, status])

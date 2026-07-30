@@ -63,6 +63,10 @@ export function EventTypeForm({
       requiresConfirmation: true,
       bufferBefore: 0,
       bufferAfter: 0,
+      minimumNotice: 0,
+      maximumAdvanceDays: 30,
+      maximumBookingsPerDay: 0,
+      maximumBookingsPerWeek: 0,
       ...defaultValues,
     },
   })
@@ -79,6 +83,10 @@ export function EventTypeForm({
       formData.set("requiresConfirmation", String(data.requiresConfirmation))
       formData.set("bufferBefore", String(data.bufferBefore ?? 0))
       formData.set("bufferAfter", String(data.bufferAfter ?? 0))
+      formData.set("minimumNotice", String(data.minimumNotice ?? 0))
+      formData.set("maximumAdvanceDays", String(data.maximumAdvanceDays ?? 30))
+      formData.set("maximumBookingsPerDay", String(data.maximumBookingsPerDay ?? 0))
+      formData.set("maximumBookingsPerWeek", String(data.maximumBookingsPerWeek ?? 0))
 
       let result: { errors?: Record<string, string[]> } | undefined
 
@@ -233,6 +241,64 @@ export function EventTypeForm({
                 />
                 {errors.bufferAfter && (
                   <p className="text-xs text-destructive">{errors.bufferAfter.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="minimumNotice">Minimum notice (min)</Label>
+                <Input
+                  id="minimumNotice"
+                  type="number"
+                  min={0}
+                  max={10080}
+                  {...register("minimumNotice", { valueAsNumber: true })}
+                />
+                {errors.minimumNotice && (
+                  <p className="text-xs text-destructive">{errors.minimumNotice.message}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="maximumAdvanceDays">Max booking window (days)</Label>
+                <Input
+                  id="maximumAdvanceDays"
+                  type="number"
+                  min={1}
+                  max={365}
+                  {...register("maximumAdvanceDays", { valueAsNumber: true })}
+                />
+                {errors.maximumAdvanceDays && (
+                  <p className="text-xs text-destructive">{errors.maximumAdvanceDays.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="maximumBookingsPerDay">Max bookings per day</Label>
+                <Input
+                  id="maximumBookingsPerDay"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  placeholder="0 = unlimited"
+                  {...register("maximumBookingsPerDay", { valueAsNumber: true })}
+                />
+                {errors.maximumBookingsPerDay && (
+                  <p className="text-xs text-destructive">{errors.maximumBookingsPerDay.message}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="maximumBookingsPerWeek">Max bookings per week</Label>
+                <Input
+                  id="maximumBookingsPerWeek"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  placeholder="0 = unlimited"
+                  {...register("maximumBookingsPerWeek", { valueAsNumber: true })}
+                />
+                {errors.maximumBookingsPerWeek && (
+                  <p className="text-xs text-destructive">{errors.maximumBookingsPerWeek.message}</p>
                 )}
               </div>
             </div>

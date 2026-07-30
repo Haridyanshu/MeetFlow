@@ -44,6 +44,21 @@ export async function sendBookingConfirmation(
   ])
 }
 
+export async function sendRescheduleConfirmation(
+  data: ConfirmationTemplateData,
+  hostEmail: string,
+  guestEmail: string,
+) {
+  const html = bookingConfirmationHtml(data)
+
+  const subject = `Booking Updated: ${data.eventTitle}`
+
+  await Promise.allSettled([
+    send({ to: guestEmail, subject, html }),
+    send({ to: hostEmail, subject, html }),
+  ])
+}
+
 export async function sendBookingCancellation(
   data: CancellationTemplateData,
   hostEmail: string,

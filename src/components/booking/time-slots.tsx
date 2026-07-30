@@ -7,11 +7,14 @@ interface Slot {
   endTime: string
 }
 
+type NoSlotsReason = "no_availability" | "booking_window" | "minimum_notice" | "daily_limit" | "weekly_limit"
+
 interface TimeSlotsProps {
   selectedDate: string
   slots: Slot[]
   isLoading: boolean
   error: string | null
+  noSlotsReason?: NoSlotsReason | null
   onDateChange: (date: string) => void
   onSlotSelect: (slot: Slot) => void
 }
@@ -28,6 +31,7 @@ export function TimeSlots({
   slots,
   isLoading,
   error,
+  noSlotsReason,
   onDateChange,
   onSlotSelect,
 }: TimeSlotsProps) {
@@ -77,10 +81,18 @@ export function TimeSlots({
       {!isLoading && selectedDate && slots.length === 0 && !error && (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-12 text-center">
           <CalendarIcon className="size-8 text-muted-foreground" />
-          <p className="text-sm font-medium">No available slots</p>
+          <p className="text-sm font-medium">
+            {noSlotsReason === "booking_window" && "Booking Window Exceeded"}
+            {noSlotsReason === "daily_limit" && "Daily Limit Reached"}
+            {noSlotsReason === "weekly_limit" && "Weekly Limit Reached"}
+            {!noSlotsReason || noSlotsReason === "no_availability" || noSlotsReason === "minimum_notice" ? "No Available Slots" : "No Available Slots"}
+          </p>
           <p className="text-sm text-muted-foreground">
-            There are no available times on this date. Try selecting a different
-            day.
+            {noSlotsReason === "booking_window" && "This date is beyond the booking window. Please select a date within the allowed range."}
+            {noSlotsReason === "daily_limit" && "The daily booking limit has been reached for this date. Please try a different day."}
+            {noSlotsReason === "weekly_limit" && "The weekly booking limit has been reached. Please try again next week."}
+            {noSlotsReason === "minimum_notice" && "The minimum notice period has not been met. Try selecting a later time."}
+            {(!noSlotsReason || noSlotsReason === "no_availability") && "There are no available times on this date. Try selecting a different day."}
           </p>
         </div>
       )}

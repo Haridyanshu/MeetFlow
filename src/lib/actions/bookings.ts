@@ -8,6 +8,10 @@ import { Prisma } from "@/generated/prisma/client"
 import { createBookingSchema, cancelBookingSchema } from "@/lib/schemas/booking"
 import type { CreateBookingInput } from "@/lib/schemas/booking"
 import { getAvailableSlots } from "@/lib/queries/bookings"
+import { validateBookingCreation, checkBookingWindow, checkDailyLimit, checkWeeklyLimit } from "@/lib/validation/booking-rules"
+import type { NoSlotsReason } from "@/lib/validation/booking-rules"
+import crypto from "crypto"
+
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/services/calendar"
 import {
   sendBookingConfirmation,
@@ -46,6 +50,13 @@ export async function createBooking(data: CreateBookingInput) {
     }
   }
 
+  const ruleCheck = await validateBookingCreation(eventType, startTime)
+  if (ruleCheck && !ruleCheck.ok) {
+    return {
+      errors: { startTime: [ruleCheck.message] },
+    }
+  }
+
   const dateStr = startTime.toISOString().split("T")[0]
   const availableSlots = await getAvailableSlots(
     parsed.data.eventTypeId,
@@ -81,6 +92,11 @@ export async function createBooking(data: CreateBookingInput) {
           return { conflict: true }
         }
 
+        const managementToken = crypto.randomUUID()
+        const managementTokenExpiresAt = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000
+        )
+
         const booking = await tx.booking.create({
           data: {
             userId: eventType.user.id,
@@ -92,6 +108,8 @@ export async function createBooking(data: CreateBookingInput) {
             endTime,
             timezone: parsed.data.timezone,
             status: "BOOKED",
+            managementToken,
+            managementTokenExpiresAt,
           },
         })
 
@@ -135,6 +153,10 @@ export async function createBooking(data: CreateBookingInput) {
       console.error("Failed to create Google Calendar event:", calendarError)
     }
 
+    const managementUrl = booking.managementToken
+      ? `${process.env.AUTH_URL ?? "http://localhost:3000"}/booking/manage/${booking.managementToken}`
+      : null
+
     try {
       await sendBookingConfirmation(
         {
@@ -148,6 +170,7 @@ export async function createBooking(data: CreateBookingInput) {
           timezone: parsed.data.timezone,
           duration: eventType.duration,
           description: eventType.description,
+          managementUrl,
         },
         eventType.user.email,
       )
@@ -178,13 +201,49 @@ export async function createBooking(data: CreateBookingInput) {
 
 export async function getAvailableSlotsAction(
   eventTypeId: string,
-  date: string
-) {
+  date: string,
+): Promise<{
+  slots: { startTime: string; endTime: string }[]
+  noSlotsReason?: NoSlotsReason
+}> {
+  const eventType = await prisma.eventType.findUnique({
+    where: { id: eventTypeId },
+  })
+
+  if (!eventType || !eventType.isActive) {
+    return { slots: [], noSlotsReason: "no_availability" }
+  }
+
+  const dateObj = new Date(date + "T00:00:00Z")
+
+  if (eventType.maximumAdvanceDays > 0) {
+    const windowCheck = checkBookingWindow(dateObj, eventType.maximumAdvanceDays)
+    if (!windowCheck.ok) {
+      return { slots: [], noSlotsReason: "booking_window" }
+    }
+  }
+
+  if (eventType.maximumBookingsPerDay > 0) {
+    const dailyCheck = await checkDailyLimit(eventTypeId, dateObj, eventType.maximumBookingsPerDay)
+    if (!dailyCheck.ok) {
+      return { slots: [], noSlotsReason: "daily_limit" }
+    }
+  }
+
+  if (eventType.maximumBookingsPerWeek > 0) {
+    const weeklyCheck = await checkWeeklyLimit(eventTypeId, dateObj, eventType.maximumBookingsPerWeek)
+    if (!weeklyCheck.ok) {
+      return { slots: [], noSlotsReason: "weekly_limit" }
+    }
+  }
+
   const slots = await getAvailableSlots(eventTypeId, date)
-  return slots.map((s) => ({
-    startTime: s.startTime.toISOString(),
-    endTime: s.endTime.toISOString(),
-  }))
+  return {
+    slots: slots.map((s) => ({
+      startTime: s.startTime.toISOString(),
+      endTime: s.endTime.toISOString(),
+    })),
+  }
 }
 
 export async function cancelBooking(id: string) {

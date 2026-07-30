@@ -21,6 +21,10 @@ export async function createEventType(formData: FormData) {
     duration: raw.duration ? Number(raw.duration) : undefined,
     bufferBefore: raw.bufferBefore ? Number(raw.bufferBefore) : undefined,
     bufferAfter: raw.bufferAfter ? Number(raw.bufferAfter) : undefined,
+    minimumNotice: raw.minimumNotice ? Number(raw.minimumNotice) : undefined,
+    maximumAdvanceDays: raw.maximumAdvanceDays ? Number(raw.maximumAdvanceDays) : undefined,
+    maximumBookingsPerDay: raw.maximumBookingsPerDay ? Number(raw.maximumBookingsPerDay) : undefined,
+    maximumBookingsPerWeek: raw.maximumBookingsPerWeek ? Number(raw.maximumBookingsPerWeek) : undefined,
     requiresConfirmation: raw.requiresConfirmation === "true" || raw.requiresConfirmation === "on",
   })
 
@@ -70,6 +74,10 @@ export async function updateEventType(id: string, formData: FormData) {
     duration: raw.duration ? Number(raw.duration) : undefined,
     bufferBefore: raw.bufferBefore ? Number(raw.bufferBefore) : undefined,
     bufferAfter: raw.bufferAfter ? Number(raw.bufferAfter) : undefined,
+    minimumNotice: raw.minimumNotice ? Number(raw.minimumNotice) : undefined,
+    maximumAdvanceDays: raw.maximumAdvanceDays ? Number(raw.maximumAdvanceDays) : undefined,
+    maximumBookingsPerDay: raw.maximumBookingsPerDay ? Number(raw.maximumBookingsPerDay) : undefined,
+    maximumBookingsPerWeek: raw.maximumBookingsPerWeek ? Number(raw.maximumBookingsPerWeek) : undefined,
     requiresConfirmation: raw.requiresConfirmation === "true" || raw.requiresConfirmation === "on",
   })
 

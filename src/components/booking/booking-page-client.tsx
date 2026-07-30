@@ -44,6 +44,7 @@ export function BookingPageClient({
   const [slots, setSlots] = useState<Slot[]>([])
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [slotsError, setSlotsError] = useState<string | null>(null)
+  const [noSlotsReason, setNoSlotsReason] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [booking, setBooking] = useState<unknown>(null)
 
@@ -53,10 +54,12 @@ export function BookingPageClient({
       setSelectedSlot(null)
       setIsLoadingSlots(true)
       setSlotsError(null)
+      setNoSlotsReason(null)
 
       try {
         const result = await getAvailableSlotsAction(eventType.id, date)
-        setSlots(result)
+        setSlots(result.slots)
+        if (result.noSlotsReason) setNoSlotsReason(result.noSlotsReason)
       } catch {
         setSlotsError("Failed to load available slots. Please try again.")
       } finally {
@@ -96,6 +99,7 @@ export function BookingPageClient({
             slots={slots}
             isLoading={isLoadingSlots}
             error={slotsError}
+            noSlotsReason={noSlotsReason as "no_availability" | "booking_window" | "minimum_notice" | "daily_limit" | "weekly_limit" | null | undefined}
             onDateChange={handleDateChange}
             onSlotSelect={handleSlotSelect}
           />

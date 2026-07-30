@@ -31,6 +31,30 @@ export const createEventTypeSchema = z.object({
     .min(0, "Buffer cannot be negative")
     .max(120, "Buffer must be at most 120 minutes")
     .optional(),
+  minimumNotice: z
+    .number()
+    .int("Minimum notice must be a whole number")
+    .min(0, "Minimum notice cannot be negative")
+    .max(10080, "Minimum notice must be at most 10080 minutes (7 days)")
+    .optional(),
+  maximumAdvanceDays: z
+    .number()
+    .int("Maximum advance days must be a whole number")
+    .min(1, "Maximum advance days must be at least 1")
+    .max(365, "Maximum advance days must be at most 365")
+    .optional(),
+  maximumBookingsPerDay: z
+    .number()
+    .int("Daily limit must be a whole number")
+    .min(0, "Daily limit cannot be negative")
+    .max(1000, "Daily limit must be at most 1000")
+    .optional(),
+  maximumBookingsPerWeek: z
+    .number()
+    .int("Weekly limit must be a whole number")
+    .min(0, "Weekly limit cannot be negative")
+    .max(1000, "Weekly limit must be at most 1000")
+    .optional(),
 })
 
 export const updateEventTypeSchema = createEventTypeSchema.partial().extend({

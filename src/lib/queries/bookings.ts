@@ -64,7 +64,7 @@ export async function getBookingById(id: string) {
 
 export async function getAvailableSlots(
   eventTypeId: string,
-  date: string
+  date: string,
 ) {
   const dateObj = parseDate(date)
 
@@ -131,6 +131,7 @@ export async function getAvailableSlots(
     orderBy: { startTime: "asc" },
   })
 
+  const now = new Date()
   const slots = generateSlots({
     date: dateObj,
     intervals,
@@ -141,8 +142,13 @@ export async function getAvailableSlots(
     })),
     bufferBefore: eventType.bufferBefore,
     bufferAfter: eventType.bufferAfter,
-    now: new Date(),
+    now,
   })
+
+  if (eventType.minimumNotice > 0) {
+    const earliestAllowed = new Date(now.getTime() + eventType.minimumNotice * 60 * 1000)
+    return slots.filter((s) => s.startTime >= earliestAllowed)
+  }
 
   return slots
 }
