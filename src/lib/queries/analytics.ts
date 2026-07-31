@@ -61,7 +61,6 @@ export async function getBookingKPIs(userId: string, range: AnalyticsRange) {
     completedCount,
     cancelledCurrent,
     activeEventTypes,
-    revenueResult,
   ] = await Promise.all([
     prisma.booking.count({ where: { ...ownership, createdAt: { gte: range.start, lte: range.end } } }),
     prisma.booking.count({ where: { ...ownership, createdAt: { gte: range.previousStart, lte: range.previousEnd } } }),
@@ -69,10 +68,6 @@ export async function getBookingKPIs(userId: string, range: AnalyticsRange) {
     prisma.booking.count({ where: { ...ownership, status: "BOOKED", endTime: { lt: now } } }),
     prisma.booking.count({ where: { ...ownership, status: "CANCELLED", startTime: { gte: range.start, lte: range.end } } }),
     prisma.eventType.count({ where: { userId, isActive: true } }),
-    prisma.booking.aggregate({
-      where: { ...ownership, paymentStatus: "PAID", createdAt: { gte: range.start, lte: range.end } },
-      _sum: { amountPaid: true },
-    }),
   ])
 
   const rescheduledBookings = await prisma.booking.findMany({
@@ -95,45 +90,7 @@ export async function getBookingKPIs(userId: string, range: AnalyticsRange) {
     cancelledBookings: cancelledCurrent,
     rescheduledBookings: rescheduledCurrent,
     activeEventTypes,
-    revenue: revenueResult._sum.amountPaid ?? 0,
   }
-}
-
-export async function getRevenueOverTime(userId: string, start: Date, end: Date) {
-  const bookings = await prisma.booking.findMany({
-    where: {
-      OR: [
-        { userId },
-        { assignedUserId: userId },
-      ],
-      paymentStatus: "PAID",
-      createdAt: { gte: start, lte: end },
-    },
-    select: { amountPaid: true, createdAt: true },
-    orderBy: { createdAt: "asc" },
-  })
-
-  const dayMap = new Map<string, number>()
-
-  const cursor = new Date(start)
-  while (cursor <= end) {
-    const key = cursor.toISOString().slice(0, 10)
-    dayMap.set(key, 0)
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
-  }
-
-  for (const b of bookings) {
-    const key = b.createdAt.toISOString().slice(0, 10)
-    const entry = dayMap.get(key)
-    if (entry != null) {
-      dayMap.set(key, entry + (b.amountPaid ?? 0))
-    }
-  }
-
-  return Array.from(dayMap.entries()).map(([date, amount]) => ({
-    date,
-    amount,
-  }))
 }
 
 export async function getBookingsOverTime(userId: string, start: Date, end: Date) {

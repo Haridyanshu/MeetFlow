@@ -36,9 +36,6 @@ interface Booking {
   status: string
   meetingUrl: string | null
   meetingProvider: string | null
-  paymentStatus: string | null
-  amountPaid: number | null
-  currency: string | null
   assignedUser?: { id: string; name: string | null; email: string } | null
   eventType: { id: string; title: string; duration: number }
 }
@@ -77,22 +74,6 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2)
-}
-
-function getPaymentLabel(status: string | null): { label: string; variant: "brand" | "success" | "warning" | "destructive" | "outline" } | null {
-  if (!status || status === "FREE") return null
-  switch (status) {
-    case "PAID":
-      return { label: "Paid", variant: "success" }
-    case "PENDING":
-      return { label: "Pending", variant: "warning" }
-    case "REFUNDED":
-      return { label: "Refunded", variant: "outline" }
-    case "FAILED":
-      return { label: "Failed", variant: "destructive" }
-    default:
-      return { label: status.toLowerCase(), variant: "outline" }
-  }
 }
 
 function MoreMenu({
@@ -162,7 +143,6 @@ function BookingRow({
   cancellingId: string | null
 }) {
   const isPast = new Date(booking.startTime) < new Date()
-  const paymentBadge = getPaymentLabel(booking.paymentStatus)
   const personName = booking.assignedUser?.name ?? booking.guestName
   const personEmail = booking.assignedUser?.email ?? booking.guestEmail
 
@@ -239,11 +219,6 @@ function BookingRow({
         <Badge variant={isPast ? "secondary" : "brand"} className="px-2 py-0.5 text-[11px] font-medium">
           {isPast ? "Completed" : "Confirmed"}
         </Badge>
-        {paymentBadge && (
-          <Badge variant={paymentBadge.variant} className="px-2 py-0.5 text-[11px] font-medium">
-            {paymentBadge.label === "Paid" && "$ "}{paymentBadge.label}
-          </Badge>
-        )}
 
         {/* Mobile actions */}
         <div className="flex sm:hidden items-center gap-1.5 ml-auto">

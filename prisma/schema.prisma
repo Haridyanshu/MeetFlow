@@ -86,13 +86,6 @@ enum BookingStatus {
   CANCELLED
 }
 
-enum PaymentStatus {
-  PENDING
-  PAID
-  REFUNDED
-  FAILED
-}
-
 model EventType {
   id                  String         @id @default(cuid())
   title               String
@@ -110,9 +103,6 @@ model EventType {
   maximumAdvanceDays  Int            @default(30)
   maximumBookingsPerDay Int          @default(0)
   maximumBookingsPerWeek Int         @default(0)
-  isPaid              Boolean        @default(false)
-  price               Int?
-  currency            String         @default("usd")
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   userId              String
@@ -146,11 +136,6 @@ model Booking {
   managementTokenExpiresAt DateTime?
   meetingUrl              String?
   meetingProvider         String?
-  paymentStatus           PaymentStatus?
-  stripeCheckoutSessionId String?             @unique
-  stripePaymentIntentId   String?
-  amountPaid              Int?
-  currency                String?
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
   participants            BookingParticipant[]
@@ -160,7 +145,6 @@ model Booking {
   @@index([userId, status])
   @@index([assignedUserId, status])
   @@index([startTime])
-  @@index([stripeCheckoutSessionId])
 }
 
 model BookingParticipant {

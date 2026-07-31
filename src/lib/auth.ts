@@ -1,29 +1,12 @@
 import NextAuth from "next-auth"
-import Google from "next-auth/providers/google"
-import GitHub from "next-auth/providers/github"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 
 import { prisma } from "@/lib/prisma"
+import { authConfig } from "@/lib/auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  providers: [
-    Google({
-      authorization: {
-        params: {
-          access_type: "offline",
-          prompt: "consent",
-          scope:
-            "openid email profile https://www.googleapis.com/auth/calendar.events",
-        },
-      },
-    }),
-    GitHub,
-  ],
-  pages: {
-    signIn: "/login",
-  },
   events: {
     async signIn({ account }) {
       if (account?.provider === "google") {
@@ -46,14 +29,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
         }
       }
-    },
-  },
-  callbacks: {
-    session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
-      }
-      return session
     },
   },
 })

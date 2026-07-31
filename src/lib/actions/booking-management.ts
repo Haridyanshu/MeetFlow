@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 
 import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
-import { getStripe } from "@/lib/stripe"
 import { getAvailableSlots } from "@/lib/queries/bookings"
 import { validateBookingCreation } from "@/lib/validation/booking-rules"
 import {
@@ -77,20 +76,9 @@ export async function cancelBookingByToken(token: string) {
     return { ok: false, error: "cancelled" as const }
   }
 
-  if (booking.paymentStatus === "PAID" && booking.stripePaymentIntentId) {
-    try {
-      const stripe = getStripe()
-      await stripe.refunds.create({
-        payment_intent: booking.stripePaymentIntentId,
-      })
-    } catch (stripeError) {
-      console.error("Failed to refund Stripe payment:", stripeError)
-    }
-  }
-
   await prisma.booking.update({
     where: { id: booking.id },
-    data: { status: "CANCELLED", paymentStatus: "REFUNDED" },
+    data: { status: "CANCELLED" },
   })
 
   const eventsToDelete = booking.calendarEvents.length > 0
