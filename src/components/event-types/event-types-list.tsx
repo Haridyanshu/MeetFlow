@@ -35,9 +35,6 @@ interface EventType {
   maximumBookingsPerWeek: number
   schedulingType: string
   teamId: string | null
-  isPaid: boolean
-  price: number | null
-  currency: string | null
   bookingCount: number
   lastBooking: Date | null
 }

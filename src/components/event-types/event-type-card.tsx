@@ -52,9 +52,6 @@ interface EventTypeCardProps {
     maximumBookingsPerWeek: number
     schedulingType: string
     teamId: string | null
-    isPaid: boolean
-    price: number | null
-    currency: string | null
     bookingCount: number
     lastBooking: Date | null
   }
@@ -156,9 +153,6 @@ export function EventTypeCard({ eventType, teams, view, baseUrl }: EventTypeCard
       maximumBookingsPerWeek: eventType.maximumBookingsPerWeek,
       schedulingType: eventType.schedulingType as "INDIVIDUAL" | "ROUND_ROBIN" | "COLLECTIVE",
       teamId: eventType.teamId ?? "",
-      isPaid: eventType.isPaid,
-      price: eventType.price ?? 0,
-      currency: eventType.currency ?? "usd",
     },
   }
 
@@ -207,11 +201,6 @@ export function EventTypeCard({ eventType, teams, view, baseUrl }: EventTypeCard
                 <span className="inline-flex items-center gap-1">
                   <MapPinIcon className="size-3" />
                   {eventType.location}
-                </span>
-              )}
-              {eventType.isPaid && (
-                <span className="inline-flex items-center gap-1 font-medium text-brand">
-                  {eventType.currency?.toUpperCase()} {((eventType.price ?? 0) / 100).toFixed(2)}
                 </span>
               )}
             </div>
@@ -329,11 +318,6 @@ export function EventTypeCard({ eventType, teams, view, baseUrl }: EventTypeCard
                 {hasBuffer && (
                   <span className="text-muted-foreground/60">
                     Buffer: {eventType.bufferBefore}/{eventType.bufferAfter}min
-                  </span>
-                )}
-                {eventType.isPaid && (
-                  <span className="font-medium text-brand">
-                    {eventType.currency?.toUpperCase()} {((eventType.price ?? 0) / 100).toFixed(2)}
                   </span>
                 )}
               </div>

@@ -35,11 +35,6 @@ interface EventTypePop {
   bookings: number
 }
 
-interface RevenueOverTime {
-  date: string
-  amount: number
-}
-
 const BRAND = "#10B981"
 const RED = "#ef4444"
 
@@ -255,77 +250,12 @@ export function EventTypePopularityChart({ data }: { data: EventTypePop[] }) {
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="bookings" fill={BRAND} radius={[0, 4, 4, 0]} maxBarSize={20} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export function RevenueOverTimeChart({ data }: { data: RevenueOverTime[] }) {
-  if (data.length === 0 || data.every((d) => d.amount === 0)) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue over time</CardTitle>
-        </CardHeader>
-        <CardContent className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
-          No revenue data for this period.
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>Revenue over time</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={BRAND} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={BRAND} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/50" vertical={false} />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 11 }}
-                tickFormatter={(v: string) => v.slice(5)}
-                className="text-muted-foreground"
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                className="text-muted-foreground"
-                tickFormatter={(v) => `$${(Number(v) / 100).toFixed(0)}`}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                content={<ChartTooltip formatter={(value: number) => `$${(value / 100).toFixed(2)}`} />}
-              />
-              <Area
-                type="monotone"
-                dataKey="amount"
-                stroke={BRAND}
-                fill="url(#revenueGrad)"
-                name="Revenue"
-                strokeWidth={2}
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  )
+      <Tooltip content={<ChartTooltip />} />
+      <Bar dataKey="bookings" fill={BRAND} radius={[0, 4, 4, 0]} maxBarSize={20} />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+</CardContent>
+</Card>
+)
 }

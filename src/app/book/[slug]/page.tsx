@@ -29,9 +29,6 @@ export default async function BookPage({
             description: eventType.description,
             duration: eventType.duration,
             location: eventType.location,
-            isPaid: eventType.isPaid,
-            price: eventType.price,
-            currency: eventType.currency,
           }}
           host={{
             name: eventType.user.name,

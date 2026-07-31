@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { getTeamsByOwner, getTeamsByMember } from "@/lib/queries/teams"
 import { getBookingsByUserId } from "@/lib/queries/bookings"
@@ -180,8 +181,13 @@ function DashboardSkeleton() {
 }
 
 async function DashboardInner() {
-  const session = await auth()!
-  const userId = session!.user.id
+  const session = await auth()
+
+  if (!session) {
+    redirect("/login")
+  }
+
+  const userId = session.user.id
 
   const [bookings, activeEventTypes, ownedTeams, memberTeams, recentActivity] = await Promise.all([
     getBookingsByUserId(userId),

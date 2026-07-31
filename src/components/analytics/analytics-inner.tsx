@@ -1,9 +1,9 @@
 import "server-only"
 
-import { getDateRange, getBookingKPIs, getBookingsOverTime, getBookingStatusDistribution, getEventTypePopularity, getEventTypeAnalytics, getTeamAnalytics, getAvailabilityInsights, getRecentActivity, getRevenueOverTime } from "@/lib/queries/analytics"
+import { getDateRange, getBookingKPIs, getBookingsOverTime, getBookingStatusDistribution, getEventTypePopularity, getEventTypeAnalytics, getTeamAnalytics, getAvailabilityInsights, getRecentActivity } from "@/lib/queries/analytics"
 import { TimeFilter } from "@/components/analytics/time-filter"
 import { KPICards } from "@/components/analytics/kpi-cards"
-import { BookingsOverTimeChart, StatusDistributionChart, EventTypePopularityChart, RevenueOverTimeChart } from "@/components/analytics/charts"
+import { BookingsOverTimeChart, StatusDistributionChart, EventTypePopularityChart } from "@/components/analytics/charts"
 import { EventTypeAnalyticsTable } from "@/components/analytics/event-type-analytics"
 import { TeamAnalyticsSection } from "@/components/analytics/team-analytics"
 import { AvailabilityInsights } from "@/components/analytics/availability-insights"
@@ -18,7 +18,7 @@ export async function AnalyticsInner({
 }) {
   const dateRange = getDateRange(range)
 
-  const [kpis, bookingsOverTime, statusDistribution, eventTypePopularity, eventTypeAnalytics, teamAnalytics, insights, activity, revenueOverTime] =
+  const [kpis, bookingsOverTime, statusDistribution, eventTypePopularity, eventTypeAnalytics, teamAnalytics, insights, activity] =
     await Promise.all([
       getBookingKPIs(userId, dateRange),
       getBookingsOverTime(userId, dateRange.start, dateRange.end),
@@ -28,7 +28,6 @@ export async function AnalyticsInner({
       getTeamAnalytics(userId, dateRange.start, dateRange.end),
       getAvailabilityInsights(userId, dateRange.start, dateRange.end),
       getRecentActivity(userId),
-      getRevenueOverTime(userId, dateRange.start, dateRange.end),
     ])
 
   return (
@@ -42,7 +41,6 @@ export async function AnalyticsInner({
         <StatusDistributionChart data={statusDistribution} />
         <EventTypePopularityChart data={eventTypePopularity} />
       </div>
-      <RevenueOverTimeChart data={revenueOverTime} />
       <EventTypeAnalyticsTable data={eventTypeAnalytics} />
       <TeamAnalyticsSection data={teamAnalytics} />
       <div className="grid gap-4 lg:grid-cols-2">

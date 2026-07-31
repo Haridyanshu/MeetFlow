@@ -5,7 +5,6 @@ import {
   CalendarIcon,
   CalendarX2Icon,
   ClockIcon,
-  DollarSignIcon,
   RefreshCwIcon,
   LayersIcon,
   TrendingUpIcon,
@@ -23,7 +22,6 @@ interface KPIs {
   cancelledBookings: number
   rescheduledBookings: number
   activeEventTypes: number
-  revenue: number
 }
 
 function ChangeBadge({ current, previous }: { current: number; previous: number }) {
@@ -61,8 +59,7 @@ interface KpiCardConfig {
 }
 
 const cardConfigs: KpiCardConfig[] = [
-  { key: "revenue", label: "Revenue", icon: DollarSignIcon, iconBg: "bg-brand-soft", iconColor: "text-brand", priority: 1 },
-  { key: "totalBookings", label: "Total Bookings", icon: CalendarCheckIcon, iconBg: "bg-brand-soft", iconColor: "text-brand", priority: 2 },
+  { key: "totalBookings", label: "Total Bookings", icon: CalendarCheckIcon, iconBg: "bg-brand-soft", iconColor: "text-brand", priority: 1 },
   { key: "completedBookings", label: "Completed", icon: ClockIcon, iconBg: "bg-brand-soft/60", iconColor: "text-brand", priority: 3 },
   { key: "upcomingBookings", label: "Upcoming", icon: CalendarIcon, iconBg: "bg-muted", iconColor: "text-muted-foreground", priority: 4 },
   { key: "cancelledBookings", label: "Cancelled", icon: CalendarX2Icon, iconBg: "bg-destructive/10", iconColor: "text-destructive", priority: 5 },
@@ -78,15 +75,11 @@ function kpiValue(key: string, kpis: KPIs): number {
     case "cancelledBookings": return kpis.cancelledBookings
     case "rescheduledBookings": return kpis.rescheduledBookings
     case "activeEventTypes": return kpis.activeEventTypes
-    case "revenue": return kpis.revenue
     default: return 0
   }
 }
 
 function kpiDisplay(key: string, value: number): string {
-  if (key === "revenue") {
-    return `$${(value / 100).toFixed(2)}`
-  }
   return value.toLocaleString()
 }
 
@@ -107,7 +100,7 @@ export function KPICards({ kpis }: { kpis: KPIs }) {
         const prev = prevValue(cfg.key, kpis)
 
         return (
-          <Card key={cfg.key} className={cn(cfg.key === "revenue" && "sm:col-span-2 lg:col-span-1")}>
+          <Card key={cfg.key}>
             <CardContent className="flex flex-col gap-2.5 p-4">
               <div className="flex items-center justify-between">
                 <div className={cn("flex size-8 items-center justify-center rounded-lg", cfg.iconBg)}>

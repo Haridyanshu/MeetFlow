@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { AnalyticsInner } from "@/components/analytics/analytics-inner"
 import { AnalyticsSkeleton } from "@/components/analytics/analytics-skeleton"
@@ -9,6 +10,11 @@ export default async function AnalyticsPage({
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const session = await auth()
+
+  if (!session) {
+    redirect("/login")
+  }
+
   const sp = await searchParams
   const range = (typeof sp?.range === "string" ? sp.range : "30d") as "7d" | "30d" | "90d" | "year"
 
@@ -21,7 +27,7 @@ export default async function AnalyticsPage({
         </p>
       </div>
       <Suspense fallback={<AnalyticsSkeleton />} key={range}>
-        <AnalyticsInner userId={session!.user.id} range={range} />
+        <AnalyticsInner userId={session.user.id} range={range} />
       </Suspense>
     </div>
   )
