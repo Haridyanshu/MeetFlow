@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DateOverrideDialog } from "@/components/availability/date-override-dialog"
+import { startOfDayInZone } from "@/lib/date"
 
 interface DateOverride {
   id: string
@@ -30,6 +31,7 @@ interface DateOverride {
 
 interface DateOverridesSectionProps {
   dateOverrides: DateOverride[]
+  timezone: string
 }
 
 function formatDate(date: Date): string {
@@ -52,6 +54,7 @@ function formatShortDate(date: Date): string {
 
 export function DateOverridesSection({
   dateOverrides,
+  timezone,
 }: DateOverridesSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create")
@@ -97,8 +100,9 @@ export function DateOverridesSection({
     (a, b) => a.date.getTime() - b.date.getTime(),
   )
 
-  const upcoming = sorted.filter((d) => d.date >= new Date())
-  const past = sorted.filter((d) => d.date < new Date())
+  const startOfToday = startOfDayInZone(new Date(), timezone)
+  const upcoming = sorted.filter((d) => d.date >= startOfToday)
+  const past = sorted.filter((d) => d.date < startOfToday)
 
   return (
     <Card>

@@ -10,6 +10,7 @@ import type { CreateBookingInput } from "@/lib/schemas/booking"
 import { getAvailableSlots } from "@/lib/queries/bookings"
 import { validateBookingCreation, checkBookingWindow, checkDailyLimit, checkWeeklyLimit } from "@/lib/validation/booking-rules"
 import type { NoSlotsReason } from "@/lib/validation/booking-rules"
+import { DEFAULT_TIMEZONE, resolveTimeZone, toZonedDateStr, zonedDateStrToUtc } from "@/lib/date"
 import crypto from "crypto"
 
 import { pickRoundRobinMember } from "@/lib/queries/bookings"
@@ -51,15 +52,15 @@ export async function createBooking(data: CreateBookingInput) {
     }
   }
 
-  const ruleCheck = await validateBookingCreation(eventType, startTime)
+  const ruleCheck = await validateBookingCreation(eventType, startTime, resolveTimeZone(parsed.data.timezone))
   if (ruleCheck && !ruleCheck.ok) {
     return {
       errors: { startTime: [ruleCheck.message] },
     }
   }
 
-  const dateStr = startTime.toISOString().split("T")[0]
-  const availableSlots = await getAvailableSlots(parsed.data.eventTypeId, dateStr)
+  const dateStr = toZonedDateStr(startTime, resolveTimeZone(parsed.data.timezone))
+  const availableSlots = await getAvailableSlots(parsed.data.eventTypeId, dateStr, resolveTimeZone(parsed.data.timezone))
 
   const slotKey = (d: Date) => d.toISOString()
   const isValid = availableSlots.some(
@@ -273,6 +274,7 @@ export async function createBooking(data: CreateBookingInput) {
 export async function getAvailableSlotsAction(
   eventTypeId: string,
   date: string,
+  timezone: string = DEFAULT_TIMEZONE,
 ): Promise<{
   slots: { startTime: string; endTime: string }[]
   noSlotsReason?: NoSlotsReason
@@ -285,30 +287,31 @@ export async function getAvailableSlotsAction(
     return { slots: [], noSlotsReason: "no_availability" }
   }
 
-  const dateObj = new Date(date + "T00:00:00Z")
+  const timeZone = resolveTimeZone(timezone)
+  const dateObj = zonedDateStrToUtc(date, timeZone)
 
   if (eventType.maximumAdvanceDays > 0) {
-    const windowCheck = checkBookingWindow(dateObj, eventType.maximumAdvanceDays)
+    const windowCheck = checkBookingWindow(dateObj, eventType.maximumAdvanceDays, timeZone)
     if (!windowCheck.ok) {
       return { slots: [], noSlotsReason: "booking_window" }
     }
   }
 
   if (eventType.maximumBookingsPerDay > 0) {
-    const dailyCheck = await checkDailyLimit(eventTypeId, dateObj, eventType.maximumBookingsPerDay)
+    const dailyCheck = await checkDailyLimit(eventTypeId, dateObj, eventType.maximumBookingsPerDay, timeZone)
     if (!dailyCheck.ok) {
       return { slots: [], noSlotsReason: "daily_limit" }
     }
   }
 
   if (eventType.maximumBookingsPerWeek > 0) {
-    const weeklyCheck = await checkWeeklyLimit(eventTypeId, dateObj, eventType.maximumBookingsPerWeek)
+    const weeklyCheck = await checkWeeklyLimit(eventTypeId, dateObj, eventType.maximumBookingsPerWeek, timeZone)
     if (!weeklyCheck.ok) {
       return { slots: [], noSlotsReason: "weekly_limit" }
     }
   }
 
-  const slots = await getAvailableSlots(eventTypeId, date)
+  const slots = await getAvailableSlots(eventTypeId, date, timeZone)
   return {
     slots: slots.map((s) => ({
       startTime: s.startTime.toISOString(),

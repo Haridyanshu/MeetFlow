@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { EventTypeForm } from "@/components/event-types/event-type-form"
 import { DeleteDialog } from "@/components/event-types/delete-dialog"
+import { formatDateShort } from "@/lib/date"
 
 interface EventTypeCardProps {
   eventType: {
@@ -58,17 +59,17 @@ interface EventTypeCardProps {
   teams?: { id: string; name: string }[]
   view: "grid" | "list"
   baseUrl: string
+  timezone: string
 }
 
-function formatLastBooked(date: Date | null): string {
+function formatLastBooked(date: Date | null, timeZone: string): string {
   if (!date) return "Never"
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const diffMs = Date.now() - date.getTime()
   const diffDays = Math.floor(diffMs / 86400000)
   if (diffDays === 0) return "Today"
   if (diffDays === 1) return "Yesterday"
   if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  return formatDateShort(date, timeZone)
 }
 
 function SchedulingTypeBadge({ type }: { type: string }) {
@@ -81,7 +82,7 @@ function SchedulingTypeBadge({ type }: { type: string }) {
   )
 }
 
-export function EventTypeCard({ eventType, teams, view, baseUrl }: EventTypeCardProps) {
+export function EventTypeCard({ eventType, teams, view, baseUrl, timezone }: EventTypeCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -211,9 +212,9 @@ export function EventTypeCard({ eventType, teams, view, baseUrl }: EventTypeCard
                 <CalendarCheckIcon className="size-3" />
                 {eventType.bookingCount}
               </span>
-              <span className="inline-flex items-center gap-1" title={`Last booked: ${formatLastBooked(eventType.lastBooking)}`}>
+              <span className="inline-flex items-center gap-1" title={`Last booked: ${formatLastBooked(eventType.lastBooking, timezone)}`}>
                 <TimerIcon className="size-3" />
-                {formatLastBooked(eventType.lastBooking)}
+                {formatLastBooked(eventType.lastBooking, timezone)}
               </span>
               {hasBuffer && (
                 <span className="inline-flex items-center gap-1" title={`Buffer: ${eventType.bufferBefore}min before, ${eventType.bufferAfter}min after`}>
@@ -313,7 +314,7 @@ export function EventTypeCard({ eventType, teams, view, baseUrl }: EventTypeCard
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <TimerIcon className="size-3" />
-                  {formatLastBooked(eventType.lastBooking)}
+                  {formatLastBooked(eventType.lastBooking, timezone)}
                 </span>
                 {hasBuffer && (
                   <span className="text-muted-foreground/60">

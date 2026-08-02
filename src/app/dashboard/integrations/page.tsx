@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getUserTimeZone } from "@/lib/server/timezone"
 import { GoogleCalendarCard } from "@/components/integrations/google-calendar-card"
 
 export default async function IntegrationsPage() {
@@ -8,9 +9,10 @@ export default async function IntegrationsPage() {
   let connected = false
   let expiresAt: number | null = null
   let lastSync: Date | null = null
+  let timezone = "Asia/Kolkata"
 
   if (session?.user?.id) {
-    const [account, latestEvent] = await Promise.all([
+    const [account, latestEvent, userTz] = await Promise.all([
       prisma.account.findFirst({
         where: { userId: session.user.id, provider: "google" },
         select: { access_token: true, refresh_token: true, scope: true, expires_at: true },
@@ -20,7 +22,10 @@ export default async function IntegrationsPage() {
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
+      getUserTimeZone(session.user.id),
     ])
+
+    timezone = userTz
 
     connected =
       !!account?.access_token &&
@@ -43,6 +48,7 @@ export default async function IntegrationsPage() {
           connected={connected}
           expiresAt={expiresAt}
           lastSync={lastSync}
+          timezone={timezone}
         />
       </div>
     </div>

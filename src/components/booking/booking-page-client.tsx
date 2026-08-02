@@ -8,6 +8,7 @@ import { BookingForm } from "@/components/booking/booking-form"
 import { BookingConfirmation } from "@/components/booking/booking-confirmation"
 import type { BookingConfirmationProps } from "@/components/booking/booking-confirmation"
 import { getAvailableSlotsAction } from "@/lib/actions/bookings"
+import { detectClientTimeZone } from "@/lib/date"
 
 interface EventTypeData {
   id: string
@@ -48,7 +49,7 @@ export function BookingPageClient({
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [booking, setBooking] = useState<unknown>(null)
   const [timezone, setTimezone] = useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    () => detectClientTimeZone(),
   )
 
   const handleDateChange = useCallback(
@@ -60,7 +61,7 @@ export function BookingPageClient({
       setNoSlotsReason(null)
 
       try {
-        const result = await getAvailableSlotsAction(eventType.id, date)
+        const result = await getAvailableSlotsAction(eventType.id, date, timezone)
         setSlots(result.slots)
         if (result.noSlotsReason) setNoSlotsReason(result.noSlotsReason)
       } catch {
@@ -69,7 +70,7 @@ export function BookingPageClient({
         setIsLoadingSlots(false)
       }
     },
-    [eventType.id],
+    [eventType.id, timezone],
   )
 
   const handleSlotSelect = useCallback((slot: Slot) => {
@@ -87,6 +88,27 @@ export function BookingPageClient({
     setStep("date")
   }, [])
 
+  const handleTimezoneChange = useCallback(
+    async (nextTimezone: string) => {
+      setTimezone(nextTimezone)
+      if (selectedDate) {
+        setIsLoadingSlots(true)
+        setSlotsError(null)
+        setNoSlotsReason(null)
+        try {
+          const result = await getAvailableSlotsAction(eventType.id, selectedDate, nextTimezone)
+          setSlots(result.slots)
+          if (result.noSlotsReason) setNoSlotsReason(result.noSlotsReason)
+        } catch {
+          setSlotsError("Failed to load available slots. Please try again.")
+        } finally {
+          setIsLoadingSlots(false)
+        }
+      }
+    },
+    [eventType.id, selectedDate],
+  )
+
   return (
     <div className="mx-auto grid min-h-dvh max-w-5xl grid-cols-1 md:grid-cols-[360px_1fr]">
       <EventInfoPanel
@@ -94,6 +116,7 @@ export function BookingPageClient({
         host={host}
         selectedSlot={selectedSlot}
         step={step}
+        timezone={timezone}
       />
       <main className="flex flex-col p-6 pt-8 md:p-10">
         <div className="mx-auto w-full max-w-md transition-all duration-300">
@@ -116,7 +139,7 @@ export function BookingPageClient({
               timezone={timezone}
               onDateChange={handleDateChange}
               onSlotSelect={handleSlotSelect}
-              onTimezoneChange={setTimezone}
+              onTimezoneChange={handleTimezoneChange}
             />
           )}
           {step === "form" && selectedSlot && (
@@ -134,6 +157,7 @@ export function BookingPageClient({
             <BookingConfirmation
               booking={booking as BookingConfirmationProps["booking"]}
               eventType={eventType}
+              timezone={timezone}
             />
           )}
         </div>

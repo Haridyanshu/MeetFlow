@@ -26,11 +26,13 @@ interface DateOverrideProps {
 interface AvailabilityPageClientProps {
   intervals: IntervalProps[]
   dateOverrides: DateOverrideProps[]
+  timezone: string
 }
 
 export function AvailabilityPageClient({
   intervals,
   dateOverrides,
+  timezone,
 }: AvailabilityPageClientProps) {
   const [, startTransition] = useTransition()
 
@@ -53,10 +55,11 @@ export function AvailabilityPageClient({
       <WeeklySchedule
         intervals={intervals}
         onToggleEnabled={handleToggleEnabled}
+        timezone={timezone}
       />
 
       {/* Date overrides */}
-      <DateOverridesSection dateOverrides={dateOverrides} />
+      <DateOverridesSection dateOverrides={dateOverrides} timezone={timezone} />
     </div>
   )
 }

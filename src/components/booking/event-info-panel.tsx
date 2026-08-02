@@ -1,4 +1,6 @@
 import { ClockIcon, MapPinIcon, CalendarIcon } from "lucide-react"
+import { formatInTimeZone } from "date-fns-tz"
+import { resolveTimeZone } from "@/lib/date"
 
 interface EventInfoPanelProps {
   eventType: {
@@ -14,27 +16,15 @@ interface EventInfoPanelProps {
   }
   selectedSlot: { startTime: string; endTime: string } | null
   step: string
+  timezone: string
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  return d
-    .toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "UTC",
-    })
+function formatTime(iso: string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), resolveTimeZone(timeZone), "HH:mm")
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+function formatDate(iso: string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), resolveTimeZone(timeZone), "EEEE, MMMM d, yyyy")
 }
 
 export function EventInfoPanel({
@@ -42,6 +32,7 @@ export function EventInfoPanel({
   host,
   selectedSlot,
   step,
+  timezone,
 }: EventInfoPanelProps) {
   const initials = (host.name ?? host.email)
     .split(" ")
@@ -82,8 +73,8 @@ export function EventInfoPanel({
         {selectedSlot && step === "confirmation" && (
           <span className="inline-flex items-center gap-2.5">
             <CalendarIcon className="size-4 shrink-0 text-foreground/40" />
-            {formatDate(selectedSlot.startTime)} at{" "}
-            {formatTime(selectedSlot.startTime)}
+            {formatDate(selectedSlot.startTime, timezone)} at{" "}
+            {formatTime(selectedSlot.startTime, timezone)}
           </span>
         )}
       </div>

@@ -17,6 +17,8 @@ import {
 } from "lucide-react"
 
 import { cancelBooking } from "@/lib/actions/bookings"
+import { formatInTimeZone } from "date-fns-tz"
+import { formatMonthYear, resolveTimeZone } from "@/lib/date"
 import { toast } from "@/components/ui/toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -42,29 +44,18 @@ interface Booking {
 
 interface BookingsPageClientProps {
   bookings: Booking[]
+  timezone: string
 }
 
 type ViewMode = "list" | "calendar"
 type StatusTab = "all" | "upcoming" | "past"
 
-function toLocalDate(date: Date): Date {
-  return new Date(date.getTime())
+function formatTime(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, resolveTimeZone(timeZone), "HH:mm")
 }
 
-function formatTime(date: Date): string {
-  return toLocalDate(date).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-}
-
-function formatDateShort(date: Date): string {
-  return toLocalDate(date).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })
+function formatDateShort(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, resolveTimeZone(timeZone), "EEE, MMM d")
 }
 
 function getInitials(name: string): string {
@@ -137,10 +128,12 @@ function BookingRow({
   booking,
   onCancel,
   cancellingId,
+  timezone,
 }: {
   booking: Booking
   onCancel: (id: string) => void
   cancellingId: string | null
+  timezone: string
 }) {
   const isPast = new Date(booking.startTime) < new Date()
   const personName = booking.assignedUser?.name ?? booking.guestName
@@ -198,11 +191,11 @@ function BookingRow({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarIcon className="size-3 text-muted-foreground/50" />
-            {formatDateShort(booking.startTime)}
+            {formatDateShort(booking.startTime, timezone)}
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <ClockIcon className="size-3 text-muted-foreground/50" />
-            {formatTime(booking.startTime)}&ndash;{formatTime(booking.endTime)}
+            {formatTime(booking.startTime, timezone)}&ndash;{formatTime(booking.endTime, timezone)}
           </span>
           <span className="text-xs tabular-nums text-muted-foreground">{booking.eventType.duration} min</span>
           {booking.meetingProvider && (
@@ -240,7 +233,7 @@ function BookingRow({
   )
 }
 
-function CalendarView({ bookings }: { bookings: Booking[] }) {
+function CalendarView({ bookings, timezone }: { bookings: Booking[]; timezone: string }) {
   const [baseDate, setBaseDate] = useState(new Date())
   const year = baseDate.getFullYear()
   const month = baseDate.getMonth()
@@ -252,12 +245,12 @@ function CalendarView({ bookings }: { bookings: Booking[] }) {
   const bookingMap = useMemo(() => {
     const map = new Map<string, Booking[]>()
     for (const b of bookings) {
-      const key = toLocalDate(b.startTime).toISOString().slice(0, 10)
+      const key = formatInTimeZone(b.startTime, resolveTimeZone(timezone), "yyyy-MM-dd")
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(b)
     }
     return map
-  }, [bookings])
+  }, [bookings, timezone])
 
   const prevMonth = useCallback(() => {
     setBaseDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
@@ -267,7 +260,7 @@ function CalendarView({ bookings }: { bookings: Booking[] }) {
     setBaseDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
   }, [])
 
-  const monthLabel = baseDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  const monthLabel = formatMonthYear(year, month)
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
   const cells: React.ReactNode[] = []
@@ -341,7 +334,7 @@ function CalendarView({ bookings }: { bookings: Booking[] }) {
   )
 }
 
-export function BookingsPageClient({ bookings }: BookingsPageClientProps) {
+export function BookingsPageClient({ bookings, timezone }: BookingsPageClientProps) {
   const [search, setSearch] = useState("")
   const [statusTab, setStatusTab] = useState<StatusTab>("all")
   const [view, setView] = useState<ViewMode>("list")
@@ -469,7 +462,7 @@ export function BookingsPageClient({ bookings }: BookingsPageClientProps) {
           }
         />
       ) : view === "calendar" ? (
-        <CalendarView bookings={filtered} />
+        <CalendarView bookings={filtered} timezone={timezone} />
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((booking) => (
@@ -478,6 +471,7 @@ export function BookingsPageClient({ bookings }: BookingsPageClientProps) {
               booking={booking}
               onCancel={handleCancel}
               cancellingId={cancellingId}
+              timezone={timezone}
             />
           ))}
         </div>

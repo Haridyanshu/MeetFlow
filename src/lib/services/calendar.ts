@@ -43,22 +43,11 @@ async function getGoogleClient(userId: string) {
   return oauth2Client
 }
 
-function formatFloatingTime(date: Date): string {
-  const y = date.getUTCFullYear()
-  const mo = String(date.getUTCMonth() + 1).padStart(2, "0")
-  const d = String(date.getUTCDate()).padStart(2, "0")
-  const h = String(date.getUTCHours()).padStart(2, "0")
-  const mi = String(date.getUTCMinutes()).padStart(2, "0")
-  const s = String(date.getUTCSeconds()).padStart(2, "0")
-  return `${y}-${mo}-${d}T${h}:${mi}:${s}`
-}
-
 function buildEvent({
   summary,
   description,
   startTime,
   endTime,
-  timezone,
 }: {
   summary: string
   description: string
@@ -70,12 +59,12 @@ function buildEvent({
     summary,
     description,
     start: {
-      dateTime: formatFloatingTime(startTime),
-      timeZone: timezone,
+      dateTime: startTime.toISOString(),
+      timeZone: "UTC",
     },
     end: {
-      dateTime: formatFloatingTime(endTime),
-      timeZone: timezone,
+      dateTime: endTime.toISOString(),
+      timeZone: "UTC",
     },
   }
 }
@@ -189,12 +178,12 @@ export async function updateCalendarEvent({
   if (description) requestBody.description = description
   if (startTime && endTime && timezone) {
     requestBody.start = {
-      dateTime: formatFloatingTime(startTime),
-      timeZone: timezone,
+      dateTime: startTime.toISOString(),
+      timeZone: "UTC",
     }
     requestBody.end = {
-      dateTime: formatFloatingTime(endTime),
-      timeZone: timezone,
+      dateTime: endTime.toISOString(),
+      timeZone: "UTC",
     }
   }
 

@@ -1,4 +1,6 @@
 import { CalendarIcon, VideoIcon } from "lucide-react"
+import { formatInTimeZone } from "date-fns-tz"
+import { resolveTimeZone } from "@/lib/date"
 
 interface BookingConfirmationProps {
   booking: {
@@ -13,24 +15,15 @@ interface BookingConfirmationProps {
     title: string
     duration: number
   }
+  timezone: string
 }
 
-function formatTime(iso: Date | string): string {
-  const d = new Date(iso)
-  const h = d.getUTCHours().toString().padStart(2, "0")
-  const m = d.getUTCMinutes().toString().padStart(2, "0")
-  return `${h}:${m}`
+function formatTime(iso: Date | string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), resolveTimeZone(timeZone), "HH:mm")
 }
 
-function formatDate(iso: Date | string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  })
+function formatDate(iso: Date | string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), resolveTimeZone(timeZone), "EEEE, MMMM d, yyyy")
 }
 
 export type { BookingConfirmationProps }
@@ -38,6 +31,7 @@ export type { BookingConfirmationProps }
 export function BookingConfirmation({
   booking,
   eventType,
+  timezone,
 }: BookingConfirmationProps) {
   return (
     <div className="flex flex-col items-center gap-8 py-8 text-center">
@@ -61,11 +55,11 @@ export function BookingConfirmation({
           <CalendarIcon className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
           <div>
             <p className="text-sm font-medium">
-              {formatDate(booking.startTime)}
+              {formatDate(booking.startTime, timezone)}
             </p>
             <p className="text-sm text-muted-foreground">
-              {formatTime(booking.startTime)} &ndash;{" "}
-              {formatTime(booking.endTime)}
+              {formatTime(booking.startTime, timezone)} &ndash;{" "}
+              {formatTime(booking.endTime, timezone)}
             </p>
           </div>
         </div>

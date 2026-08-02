@@ -1,8 +1,3 @@
-export interface TimeInterval {
-  start: string
-  end: string
-}
-
 export interface ExistingBooking {
   startTime: Date
   endTime: Date
@@ -13,30 +8,19 @@ export interface Slot {
   endTime: Date
 }
 
+export interface SlotRange {
+  start: Date
+  end: Date
+}
+
 export interface GenerateSlotsParams {
-  date: Date
-  intervals: TimeInterval[]
+  ranges: SlotRange[]
   duration: number
   step?: number
   existingBookings: ExistingBooking[]
   bufferBefore: number
   bufferAfter: number
   now: Date
-}
-
-function timeStringToDate(date: Date, time: string): Date {
-  const [hours, minutes] = time.split(":").map(Number)
-  return new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate(),
-      hours,
-      minutes,
-      0,
-      0
-    )
-  )
 }
 
 function intervalsOverlap(
@@ -50,8 +34,7 @@ function intervalsOverlap(
 
 export function generateSlots(params: GenerateSlotsParams): Slot[] {
   const {
-    date,
-    intervals,
+    ranges,
     duration,
     step = 15,
     existingBookings,
@@ -72,13 +55,13 @@ export function generateSlots(params: GenerateSlotsParams): Slot[] {
 
   const slots: Slot[] = []
 
-  for (const interval of intervals) {
-    const intervalStartMs = timeStringToDate(date, interval.start).getTime()
-    const intervalEndMs = timeStringToDate(date, interval.end).getTime()
+  for (const range of ranges) {
+    const rangeStartMs = range.start.getTime()
+    const rangeEndMs = range.end.getTime()
 
-    let cursorMs = intervalStartMs
+    let cursorMs = rangeStartMs
 
-    while (cursorMs + durationMs <= intervalEndMs) {
+    while (cursorMs + durationMs <= rangeEndMs) {
       const slotStart = new Date(cursorMs)
       const slotEnd = new Date(cursorMs + durationMs)
 

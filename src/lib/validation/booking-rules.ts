@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { addDaysInZone, endOfDayInZone, startOfDayInZone, startOfWeekInZone } from "@/lib/date"
 
 export type NoSlotsReason =
   | "no_availability"
@@ -14,14 +15,13 @@ export type BookingRuleCheck =
 export function checkBookingWindow(
   date: Date,
   maximumAdvanceDays: number,
+  timeZone: string,
   now: Date = new Date(),
 ): BookingRuleCheck {
   if (maximumAdvanceDays <= 0) return { ok: true }
-  const maxDate = new Date(now)
-  maxDate.setDate(maxDate.getDate() + maximumAdvanceDays)
-  maxDate.setHours(23, 59, 59, 999)
-  const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  if (startOfDay > maxDate) {
+  const lastAllowedEnd = endOfDayInZone(addDaysInZone(now, timeZone, maximumAdvanceDays), timeZone)
+  const startOfDay = startOfDayInZone(date, timeZone)
+  if (startOfDay > lastAllowedEnd) {
     return {
       ok: false,
       reason: "booking_window",
@@ -52,10 +52,11 @@ export async function checkDailyLimit(
   eventTypeId: string,
   date: Date,
   maximumBookingsPerDay: number,
+  timeZone: string,
 ): Promise<BookingRuleCheck> {
   if (maximumBookingsPerDay <= 0) return { ok: true }
-  const dayStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  const dayEnd = new Date(dayStart.getTime() + 86400000)
+  const dayStart = startOfDayInZone(date, timeZone)
+  const dayEnd = endOfDayInZone(date, timeZone)
   const count = await prisma.booking.count({
     where: {
       eventTypeId,
@@ -77,10 +78,10 @@ export async function checkWeeklyLimit(
   eventTypeId: string,
   date: Date,
   maximumBookingsPerWeek: number,
+  timeZone: string,
 ): Promise<BookingRuleCheck> {
   if (maximumBookingsPerWeek <= 0) return { ok: true }
-  const dayOfWeek = date.getUTCDay()
-  const weekStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - dayOfWeek))
+  const weekStart = startOfWeekInZone(date, timeZone)
   const weekEnd = new Date(weekStart.getTime() + 7 * 86400000)
   const count = await prisma.booking.count({
     where: {
@@ -102,15 +103,16 @@ export async function checkWeeklyLimit(
 export async function validateBookingCreation(
   eventType: { id: string; minimumNotice: number; maximumAdvanceDays: number; maximumBookingsPerDay: number; maximumBookingsPerWeek: number },
   startTime: Date,
+  timeZone: string,
   now: Date = new Date(),
 ): Promise<BookingRuleCheck | null> {
-  const windowCheck = checkBookingWindow(startTime, eventType.maximumAdvanceDays, now)
+  const windowCheck = checkBookingWindow(startTime, eventType.maximumAdvanceDays, timeZone, now)
   if (!windowCheck.ok) return windowCheck
   const noticeCheck = checkMinimumNotice(startTime, eventType.minimumNotice, now)
   if (!noticeCheck.ok) return noticeCheck
-  const dailyCheck = await checkDailyLimit(eventType.id, startTime, eventType.maximumBookingsPerDay)
+  const dailyCheck = await checkDailyLimit(eventType.id, startTime, eventType.maximumBookingsPerDay, timeZone)
   if (!dailyCheck.ok) return dailyCheck
-  const weeklyCheck = await checkWeeklyLimit(eventType.id, startTime, eventType.maximumBookingsPerWeek)
+  const weeklyCheck = await checkWeeklyLimit(eventType.id, startTime, eventType.maximumBookingsPerWeek, timeZone)
   if (!weeklyCheck.ok) return weeklyCheck
   return null
 }

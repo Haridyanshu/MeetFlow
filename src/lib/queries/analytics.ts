@@ -1,5 +1,6 @@
 import "server-only"
 import { prisma } from "@/lib/prisma"
+import { addDaysInZone, endOfDayInZone, formatZoned, resolveTimeZone, startOfDayInZone, zonedDateStrToUtc, zonedHour, zonedWallClock, zonedWeekday } from "@/lib/date"
 
 export interface AnalyticsRange {
   start: Date
@@ -8,9 +9,14 @@ export interface AnalyticsRange {
   previousEnd: Date
 }
 
-export function getDateRange(range: string, customStart?: string, customEnd?: string): AnalyticsRange {
-  const now = new Date()
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999))
+export function getDateRange(
+  range: string,
+  customStart?: string,
+  customEnd?: string,
+  timeZone?: string,
+): AnalyticsRange {
+  const tz = resolveTimeZone(timeZone)
+  const end = endOfDayInZone(new Date(), tz)
 
   let start: Date
 
@@ -22,13 +28,12 @@ export function getDateRange(range: string, customStart?: string, customEnd?: st
       start = new Date(end.getTime() - 90 * 86400000)
       break
     case "year":
-      start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
+      start = zonedDateStrToUtc(`${zonedWallClock(new Date(), tz).getFullYear()}-01-01`, tz)
       break
     case "custom":
       if (customStart && customEnd) {
-        start = new Date(customStart)
-        end.setTime(new Date(customEnd).getTime())
-        end.setUTCHours(23, 59, 59, 999)
+        start = startOfDayInZone(zonedDateStrToUtc(customStart.slice(0, 10), tz), tz)
+        end.setTime(endOfDayInZone(zonedDateStrToUtc(customEnd.slice(0, 10), tz), tz).getTime())
       } else {
         start = new Date(end.getTime() - 30 * 86400000)
       }
@@ -93,7 +98,14 @@ export async function getBookingKPIs(userId: string, range: AnalyticsRange) {
   }
 }
 
-export async function getBookingsOverTime(userId: string, start: Date, end: Date) {
+export async function getBookingsOverTime(
+  userId: string,
+  start: Date,
+  end: Date,
+  timeZone?: string,
+) {
+  const tz = resolveTimeZone(timeZone)
+
   const bookings = await prisma.booking.findMany({
     where: {
       OR: [
@@ -108,22 +120,22 @@ export async function getBookingsOverTime(userId: string, start: Date, end: Date
 
   const dayMap = new Map<string, { created: number; cancelled: number; booked: number }>()
 
-  const cursor = new Date(start)
+  let cursor = startOfDayInZone(start, tz)
   while (cursor <= end) {
-    const key = cursor.toISOString().slice(0, 10)
+    const key = formatZoned(cursor, tz, "yyyy-MM-dd")
     dayMap.set(key, { created: 0, cancelled: 0, booked: 0 })
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
+    cursor = addDaysInZone(cursor, tz, 1)
   }
 
   for (const b of bookings) {
-    const key = b.startTime.toISOString().slice(0, 10)
+    const key = formatZoned(b.startTime, tz, "yyyy-MM-dd")
     const entry = dayMap.get(key)
     if (entry) {
       entry.booked++
       if (b.status === "CANCELLED") entry.cancelled++
     }
 
-    const createdKey = b.createdAt.toISOString().slice(0, 10)
+    const createdKey = formatZoned(b.createdAt, tz, "yyyy-MM-dd")
     const createdEntry = dayMap.get(createdKey)
     if (createdEntry) {
       createdEntry.created++
@@ -289,7 +301,14 @@ export async function getTeamAnalytics(userId: string, start: Date, end: Date) {
   })
 }
 
-export async function getAvailabilityInsights(userId: string, start: Date, end: Date) {
+export async function getAvailabilityInsights(
+  userId: string,
+  start: Date,
+  end: Date,
+  timeZone?: string,
+) {
+  const tz = resolveTimeZone(timeZone)
+
   const bookings = await prisma.booking.findMany({
     where: {
       OR: [
@@ -320,8 +339,8 @@ export async function getAvailabilityInsights(userId: string, start: Date, end: 
   let totalLeadMs = 0
 
   for (const b of bookings) {
-    dayCount[b.startTime.getUTCDay()]++
-    hourCount[b.startTime.getUTCHours()]++
+    dayCount[zonedWeekday(b.startTime, tz)]++
+    hourCount[zonedHour(b.startTime, tz)]++
     totalNoticeMs += b.startTime.getTime() - b.createdAt.getTime()
     totalLeadMs += b.startTime.getTime() - b.createdAt.getTime()
   }

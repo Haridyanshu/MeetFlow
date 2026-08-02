@@ -1,14 +1,16 @@
 import { auth } from "@/lib/auth"
 import { getEventTypesByUserId } from "@/lib/queries/event-types"
 import { getTeamsByOwner } from "@/lib/queries/teams"
+import { getUserTimeZone } from "@/lib/server/timezone"
 import { headers } from "next/headers"
 import { EventTypesList } from "@/components/event-types/event-types-list"
 
 export default async function EventTypesPage() {
   const session = await auth()
-  const [eventTypes, teams] = await Promise.all([
+  const [eventTypes, teams, timezone] = await Promise.all([
     getEventTypesByUserId(session!.user.id),
     getTeamsByOwner(session!.user.id),
+    getUserTimeZone(session!.user.id),
   ])
 
   const headersList = await headers()
@@ -24,7 +26,7 @@ export default async function EventTypesPage() {
           Create and manage your event types for scheduling.
         </p>
       </div>
-      <EventTypesList eventTypes={eventTypes} teams={teams} baseUrl={baseUrl} />
+      <EventTypesList eventTypes={eventTypes} teams={teams} baseUrl={baseUrl} timezone={timezone} />
     </div>
   )
 }

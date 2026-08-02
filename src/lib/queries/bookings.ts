@@ -2,12 +2,9 @@ import "server-only"
 
 import { prisma } from "@/lib/prisma"
 import { generateSlots } from "@/lib/scheduling/generate-slots"
-import type { Slot } from "@/lib/scheduling/generate-slots"
-
-function parseDate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number)
-  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
-}
+import type { Slot, SlotRange } from "@/lib/scheduling/generate-slots"
+import { fromZonedTime } from "date-fns-tz"
+import { dayRangeInZone, resolveTimeZone, toZonedDateStr, zonedWeekday, startOfDayInZone, addDaysInZone } from "@/lib/date"
 
 export async function getBookingsForDay(eventTypeId: string, date: Date) {
   const dayStart = new Date(
@@ -65,47 +62,99 @@ export async function getBookingById(id: string) {
   })
 }
 
-async function getUserSlotsForDate(
+interface HostEventType {
+  id: string
+  duration: number
+  bufferBefore: number
+  bufferAfter: number
+  minimumNotice: number
+}
+
+async function getAvailabilityRanges(
   userId: string,
-  eventType: { id: string; duration: number; bufferBefore: number; bufferAfter: number; minimumNotice: number },
-  date: Date,
-): Promise<Slot[]> {
-  const dayOfWeek = date.getUTCDay()
-
-  const weeklyAvailability = await prisma.weeklyAvailability.findUnique({
-    where: { userId },
-    include: {
-      intervals: {
-        where: { dayOfWeek, isEnabled: true },
-        orderBy: { startTime: "asc" },
+  timeZone: string,
+  from: Date,
+  to: Date,
+): Promise<SlotRange[]> {
+  const [weeklyAvailability, overrides] = await Promise.all([
+    prisma.weeklyAvailability.findUnique({
+      where: { userId },
+      include: {
+        intervals: {
+          where: { isEnabled: true },
+          orderBy: { startTime: "asc" },
+        },
       },
-    },
-  })
+    }),
+    prisma.dateOverride.findMany({ where: { userId } }),
+  ])
 
-  const dateOverride = await prisma.dateOverride.findUnique({
-    where: { userId_date: { userId, date } },
-  })
-
-  let intervals: { start: string; end: string }[]
-
-  if (dateOverride) {
-    if (!dateOverride.isAvailable) return []
-    if (dateOverride.startTime && dateOverride.endTime) {
-      intervals = [{ start: dateOverride.startTime, end: dateOverride.endTime }]
-    } else {
-      intervals = (weeklyAvailability?.intervals ?? []).map((i) => ({
-        start: i.startTime,
-        end: i.endTime,
-      }))
-    }
-  } else {
-    intervals = (weeklyAvailability?.intervals ?? []).map((i) => ({
-      start: i.startTime,
-      end: i.endTime,
-    }))
+  const overrideMap = new Map<string, { isAvailable: boolean; startTime: string | null; endTime: string | null }>()
+  for (const o of overrides) {
+    overrideMap.set(o.date.toISOString().slice(0, 10), {
+      isAvailable: o.isAvailable,
+      startTime: o.startTime,
+      endTime: o.endTime,
+    })
   }
 
-  if (intervals.length === 0) return []
+  const ranges: SlotRange[] = []
+
+  let current = startOfDayInZone(from, timeZone)
+  while (current < to) {
+    const localDateStr = toZonedDateStr(current, timeZone)
+    const weekday = zonedWeekday(current, timeZone)
+    const override = overrideMap.get(localDateStr)
+
+    let intervals: { start: string; end: string }[]
+
+    if (override) {
+      if (!override.isAvailable) {
+        current = addDaysInZone(current, timeZone, 1)
+        continue
+      }
+      if (override.startTime && override.endTime) {
+        intervals = [{ start: override.startTime, end: override.endTime }]
+      } else {
+        intervals = (weeklyAvailability?.intervals ?? [])
+          .filter((i) => i.dayOfWeek === weekday)
+          .map((i) => ({ start: i.startTime, end: i.endTime }))
+      }
+    } else {
+      intervals = (weeklyAvailability?.intervals ?? [])
+        .filter((i) => i.dayOfWeek === weekday)
+        .map((i) => ({ start: i.startTime, end: i.endTime }))
+    }
+
+    for (const interval of intervals) {
+      const rangeStart = fromZonedTime(`${localDateStr}T${interval.start}:00`, timeZone)
+      const rangeEnd = fromZonedTime(`${localDateStr}T${interval.end}:00`, timeZone)
+      ranges.push({ start: rangeStart, end: rangeEnd })
+    }
+
+    current = addDaysInZone(current, timeZone, 1)
+  }
+
+  return ranges
+}
+
+async function getUserSlotsForDate(
+  userId: string,
+  eventType: HostEventType,
+  timeZone: string,
+  dayStart: Date,
+  dayEnd: Date,
+): Promise<Slot[]> {
+  const rawRanges = await getAvailabilityRanges(userId, timeZone, dayStart, dayEnd)
+
+  const ranges = rawRanges
+    .map((r) => ({
+      start: r.start < dayStart ? dayStart : r.start,
+      end: r.end > dayEnd ? dayEnd : r.end,
+    }))
+    .filter((r) => r.start < r.end)
+
+  if (ranges.length === 0) return []
 
   const existingBookings = await prisma.booking.findMany({
     where: {
@@ -113,15 +162,15 @@ async function getUserSlotsForDate(
         { eventTypeId: eventType.id, status: "BOOKED", userId },
         { eventTypeId: eventType.id, status: "BOOKED", assignedUserId: userId },
       ],
-      startTime: { gte: date, lt: new Date(date.getTime() + 86400000) },
+      startTime: { lt: new Date(dayEnd.getTime() + eventType.bufferBefore * 60 * 1000) },
+      endTime: { gt: new Date(dayStart.getTime() - eventType.bufferAfter * 60 * 1000) },
     },
     orderBy: { startTime: "asc" },
   })
 
   const now = new Date()
   const slots = generateSlots({
-    date,
-    intervals,
+    ranges,
     duration: eventType.duration,
     existingBookings: existingBookings.map((b) => ({
       startTime: b.startTime,
@@ -143,28 +192,29 @@ async function getUserSlotsForDate(
 export async function getAvailableSlots(
   eventTypeId: string,
   date: string,
+  timeZone: string,
 ): Promise<Slot[]> {
-  const dateObj = parseDate(date)
+  const { start: dayStart, end: dayEnd } = dayRangeInZone(date, timeZone)
 
   const eventType = await prisma.eventType.findUnique({
     where: { id: eventTypeId },
-    include: { user: true, team: { include: { members: true } } },
+    include: { user: true, team: { include: { members: { include: { user: { select: { timezone: true } } } } } } },
   })
 
   if (!eventType || !eventType.isActive) return []
 
   if (eventType.schedulingType !== "INDIVIDUAL" && eventType.teamId && eventType.team) {
-    const memberIds = eventType.team.members
-      .filter((m) => m.role !== "OWNER" || m.userId === eventType.user.id)
-      .map((m) => m.userId)
-
-    const allSlots = await Promise.all(
-      memberIds.map((uid) => getUserSlotsForDate(uid, eventType, dateObj)),
+    const memberSlots = await Promise.all(
+      eventType.team.members
+        .filter((m) => m.role !== "OWNER" || m.userId === eventType.user.id)
+        .map((m) =>
+          getUserSlotsForDate(m.userId, eventType, resolveTimeZone(m.user?.timezone), dayStart, dayEnd)
+        ),
     )
 
     if (eventType.schedulingType === "ROUND_ROBIN") {
       const slotMap = new Map<string, Slot>()
-      for (const slots of allSlots) {
+      for (const slots of memberSlots) {
         for (const slot of slots) {
           const key = slot.startTime.toISOString()
           if (!slotMap.has(key)) {
@@ -176,8 +226,8 @@ export async function getAvailableSlots(
     }
 
     if (eventType.schedulingType === "COLLECTIVE") {
-      if (allSlots.length === 0) return []
-      return allSlots.reduce((common, slots) =>
+      if (memberSlots.length === 0) return []
+      return memberSlots.reduce((common, slots) =>
         common.filter((s) =>
           slots.some((cs) => cs.startTime.getTime() === s.startTime.getTime())
         )
@@ -185,7 +235,7 @@ export async function getAvailableSlots(
     }
   }
 
-  return getUserSlotsForDate(eventType.user.id, eventType, dateObj)
+  return getUserSlotsForDate(eventType.user.id, eventType, resolveTimeZone(eventType.user.timezone), dayStart, dayEnd)
 }
 
 export async function pickRoundRobinMember(
@@ -195,19 +245,20 @@ export async function pickRoundRobinMember(
 ): Promise<string | null> {
   const eventType = await prisma.eventType.findUnique({
     where: { id: eventTypeId },
-    include: { team: { include: { members: true } } },
+    include: { team: { include: { members: { include: { user: { select: { timezone: true } } } } } } },
   })
 
   if (!eventType?.team) return null
 
   const memberIds = eventType.team.members.map((m) => m.userId)
-  const date = new Date(Date.UTC(startTime.getUTCFullYear(), startTime.getUTCMonth(), startTime.getUTCDate()))
 
   const counts = await Promise.all(
     memberIds.map(async (uid) => {
-      const slots = await getUserSlotsForDate(uid, eventType, date)
-      const hasSlot = slots.some(
-        (s) => s.startTime.getTime() === startTime.getTime() && s.endTime.getTime() === endTime.getTime(),
+      const member = eventType.team!.members.find((m) => m.userId === uid)
+      const timeZone = resolveTimeZone(member?.user?.timezone)
+      const rawRanges = await getAvailabilityRanges(uid, timeZone, startTime, endTime)
+      const hasSlot = rawRanges.some(
+        (r) => startTime >= r.start && endTime <= r.end,
       )
       if (!hasSlot) return { userId: uid, count: Infinity }
 

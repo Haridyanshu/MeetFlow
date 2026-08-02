@@ -7,6 +7,7 @@ import { DayCard } from "@/components/availability/day-card"
 import { IntervalDialog } from "@/components/availability/interval-dialog"
 import { CopyScheduleDialog } from "@/components/availability/copy-schedule-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { zonedWeekday } from "@/lib/date"
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -22,9 +23,10 @@ interface Interval {
 interface WeeklyScheduleProps {
   intervals: Interval[]
   onToggleEnabled: (id: string, enabled: boolean) => void
+  timezone: string
 }
 
-export function WeeklySchedule({ intervals, onToggleEnabled }: WeeklyScheduleProps) {
+export function WeeklySchedule({ intervals, onToggleEnabled, timezone }: WeeklyScheduleProps) {
   const [intervalDialogOpen, setIntervalDialogOpen] = useState(false)
   const [intervalMode, setIntervalMode] = useState<"create" | "edit">("create")
   const [intervalDay, setIntervalDay] = useState(1)
@@ -45,7 +47,7 @@ export function WeeklySchedule({ intervals, onToggleEnabled }: WeeklySchedulePro
     {},
   )
 
-  const today = new Date().getDay()
+  const today = zonedWeekday(new Date(), timezone)
 
   const handleAdd = useCallback((dayOfWeek: number) => {
     setIntervalMode("create")

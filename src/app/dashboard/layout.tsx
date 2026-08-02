@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
+import { getUserTimeZone } from "@/lib/server/timezone"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { Toaster } from "@/components/ui/toast"
+import { TimezoneDetector } from "@/components/dashboard/timezone-detector"
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +16,8 @@ export default async function DashboardLayout({
   if (!session) {
     redirect("/login")
   }
+
+  const timezone = await getUserTimeZone(session.user.id)
 
   return (
     <div className="flex min-h-screen">
@@ -31,6 +35,7 @@ export default async function DashboardLayout({
         </main>
       </div>
       <Toaster />
+      <TimezoneDetector storedTimezone={timezone} />
     </div>
   )
 }

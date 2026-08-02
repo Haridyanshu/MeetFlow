@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
+import { formatRelativeTime } from "@/lib/date"
 
 interface ActivityEvent {
   id: string
@@ -42,19 +43,7 @@ const bgMap: Record<ActivityEvent["type"], string> = {
   invitation_sent: "bg-muted",
 }
 
-function timeAgo(date: Date) {
-  const ms = Date.now() - date.getTime()
-  const mins = Math.floor(ms / 60000)
-  if (mins < 1) return "just now"
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return date.toLocaleDateString()
-}
-
-export function RecentActivity({ data }: { data: ActivityEvent[] }) {
+export function RecentActivity({ data, timezone }: { data: ActivityEvent[]; timezone: string }) {
   if (data.length === 0) {
     return (
       <Card>
@@ -101,7 +90,7 @@ export function RecentActivity({ data }: { data: ActivityEvent[] }) {
                   <p className="text-sm text-foreground truncate">{event.description}</p>
                 </div>
                 <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground pt-0.5">
-                  {timeAgo(event.timestamp)}
+                  {formatRelativeTime(event.timestamp, timezone)}
                 </span>
               </div>
             )

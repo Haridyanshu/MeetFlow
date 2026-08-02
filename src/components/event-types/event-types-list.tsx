@@ -87,7 +87,7 @@ function NativeSelect({
   )
 }
 
-export function EventTypesList({ eventTypes, teams, baseUrl: ssrBaseUrl }: { eventTypes: EventType[]; teams?: TeamOption[]; baseUrl?: string }) {
+export function EventTypesList({ eventTypes, teams, baseUrl: ssrBaseUrl, timezone }: { eventTypes: EventType[]; teams?: TeamOption[]; baseUrl?: string; timezone: string }) {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all")
   const [teamFilter, setTeamFilter] = useState<string>("all")
@@ -257,6 +257,7 @@ export function EventTypesList({ eventTypes, teams, baseUrl: ssrBaseUrl }: { eve
                 teams={teams}
                 view="grid"
                 baseUrl={baseUrl}
+                timezone={timezone}
               />
             ))}
           </div>
@@ -269,6 +270,7 @@ export function EventTypesList({ eventTypes, teams, baseUrl: ssrBaseUrl }: { eve
                 teams={teams}
                 view="list"
                 baseUrl={baseUrl}
+                timezone={timezone}
               />
             ))}
           </div>

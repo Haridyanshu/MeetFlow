@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { formatInTimeZone } from "date-fns-tz"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { formatMonthYear } from "@/lib/date"
 
 interface Slot {
   startTime: string
@@ -53,11 +55,8 @@ const TIMEZONES = [
   "Pacific/Auckland",
 ]
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const h = d.getUTCHours().toString().padStart(2, "0")
-  const m = d.getUTCMinutes().toString().padStart(2, "0")
-  return `${h}:${m}`
+function formatTime(iso: string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), timeZone, "HH:mm")
 }
 
 export function TimeSlots({
@@ -130,10 +129,7 @@ export function TimeSlots({
     }
   }
 
-  const monthLabel = new Date(viewYear, viewMonth).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  })
+  const monthLabel = formatMonthYear(viewYear, viewMonth)
 
   return (
     <div className="flex flex-col gap-8">
@@ -275,7 +271,7 @@ export function TimeSlots({
                 className="justify-center font-mono text-xs tracking-tight transition-all duration-150 hover:border-brand/40 hover:text-brand hover:bg-brand-soft"
                 onClick={() => onSlotSelect(slot)}
               >
-                {formatTime(slot.startTime)}&ndash;{formatTime(slot.endTime)}
+                {formatTime(slot.startTime, timezone)}&ndash;{formatTime(slot.endTime, timezone)}
               </Button>
             ))}
           </div>

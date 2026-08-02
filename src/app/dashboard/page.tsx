@@ -6,6 +6,8 @@ import { getTeamsByOwner, getTeamsByMember } from "@/lib/queries/teams"
 import { getBookingsByUserId } from "@/lib/queries/bookings"
 import { getActiveEventTypesByUserId } from "@/lib/queries/event-types"
 import { getRecentActivity } from "@/lib/queries/analytics"
+import { getUserTimeZone } from "@/lib/server/timezone"
+import { formatRelativeTime, formatTime, getCurrentTime, getPartOfDay, getTodayLabel, toZonedDateStr } from "@/lib/date"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -22,41 +24,13 @@ import {
   ExternalLinkIcon,
 } from "lucide-react"
 
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 1) return "Just now"
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
-
-function getGreeting(name: string | null | undefined): string {
+function getGreeting(name: string | null | undefined, timeZone: string): string {
   if (!name) return "there"
   const first = name.split(" ")[0]
-  const hour = new Date().getHours()
-  if (hour < 12) return `good morning, ${first}`
-  if (hour < 17) return `good afternoon, ${first}`
+  const part = getPartOfDay(timeZone)
+  if (part === "morning") return `good morning, ${first}`
+  if (part === "afternoon") return `good afternoon, ${first}`
   return `good evening, ${first}`
-}
-
-function getTodayDate(): string {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  })
-}
-
-function getCurrentTime(): string {
-  return new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })
 }
 
 interface KpiCardProps {
@@ -189,12 +163,13 @@ async function DashboardInner() {
 
   const userId = session.user.id
 
-  const [bookings, activeEventTypes, ownedTeams, memberTeams, recentActivity] = await Promise.all([
+  const [bookings, activeEventTypes, ownedTeams, memberTeams, recentActivity, timeZone] = await Promise.all([
     getBookingsByUserId(userId),
     getActiveEventTypesByUserId(userId),
     getTeamsByOwner(userId),
     getTeamsByMember(userId),
     getRecentActivity(userId, 6),
+    getUserTimeZone(userId),
   ])
 
   const now = new Date()
@@ -205,7 +180,7 @@ async function DashboardInner() {
 
   const todayBookings = bookings.filter((b) => {
     const bDate = new Date(b.startTime)
-    return bDate.toDateString() === now.toDateString() && b.startTime >= now
+    return toZonedDateStr(bDate, timeZone) === toZonedDateStr(now, timeZone) && b.startTime >= now
   })
 
   const allTeams = [...ownedTeams, ...memberTeams]
@@ -219,13 +194,13 @@ async function DashboardInner() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-[22px] font-semibold tracking-tight text-foreground">
-            {getGreeting(session?.user?.name)}
+            {getGreeting(session?.user?.name, timeZone)}
           </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{getTodayDate()}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{getTodayLabel(timeZone)}</p>
         </div>
         <div className="hidden items-center gap-2 rounded-lg bg-surface-secondary px-3 py-1.5 sm:flex">
           <ClockIcon className="size-3.5 text-muted-foreground" />
-          <span className="text-sm tabular-nums text-foreground">{getCurrentTime()}</span>
+          <span className="text-sm tabular-nums text-foreground">{getCurrentTime(timeZone)}</span>
         </div>
       </div>
 
@@ -319,11 +294,7 @@ async function DashboardInner() {
                   >
                     <div className="flex flex-col items-center gap-0.5 min-w-[48px]">
                       <span className="text-[13px] font-bold tabular-nums text-foreground">
-                        {new Date(booking.startTime).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: false,
-                        })}
+                        {formatTime(booking.startTime, timeZone)}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {booking.eventType?.duration ?? 30}min
@@ -397,7 +368,7 @@ async function DashboardInner() {
                       <ActivityDescription description={event.description} />
                     </div>
                     <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-                      {formatRelativeTime(event.timestamp)}
+                      {formatRelativeTime(event.timestamp, timeZone)}
                     </span>
                   </div>
                 ))}

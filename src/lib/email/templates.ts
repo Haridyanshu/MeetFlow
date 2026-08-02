@@ -1,20 +1,12 @@
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+import { formatInTimeZone } from "date-fns-tz"
+import { resolveTimeZone } from "@/lib/date"
+
+function formatDate(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, resolveTimeZone(timeZone), "EEEE, MMMM d, yyyy")
 }
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  })
+function formatTime(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, resolveTimeZone(timeZone), "HH:mm")
 }
 
 function baseHtml(content: string): string {
@@ -73,8 +65,8 @@ export function bookingConfirmationHtml(data: ConfirmationTemplateData): string 
     { label: "Event", value: data.eventTitle },
     { label: "Host", value: data.hostName },
     { label: "Guest", value: `${data.guestName} (${data.guestEmail})` },
-    { label: "Date", value: formatDate(data.date) },
-    { label: "Time", value: `${formatTime(data.startTime)} \u2013 ${formatTime(data.endTime)}` },
+    { label: "Date", value: formatDate(data.date, data.timezone) },
+    { label: "Time", value: `${formatTime(data.startTime, data.timezone)} \u2013 ${formatTime(data.endTime, data.timezone)}` },
     { label: "Timezone", value: data.timezone },
     { label: "Duration", value: `${data.duration} min` },
   ]
@@ -154,11 +146,11 @@ export function bookingCancellationHtml(data: CancellationTemplateData): string 
       </tr>
       <tr>
         <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Date</td>
-        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${formatDate(data.date)}</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${formatDate(data.date, data.timezone)}</td>
       </tr>
       <tr>
         <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Time</td>
-        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${formatTime(data.startTime)} \u2013 ${formatTime(data.endTime)}</td>
+        <td style="padding:6px 0;color:#1a1a2e;font-size:14px;font-weight:500">${formatTime(data.startTime, data.timezone)} \u2013 ${formatTime(data.endTime, data.timezone)}</td>
       </tr>
       <tr>
         <td style="padding:6px 0;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top;width:100px">Timezone</td>

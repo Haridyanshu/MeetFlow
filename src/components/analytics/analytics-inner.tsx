@@ -12,21 +12,23 @@ import { RecentActivity } from "@/components/analytics/recent-activity"
 export async function AnalyticsInner({
   userId,
   range,
+  timezone,
 }: {
   userId: string
   range: "7d" | "30d" | "90d" | "year"
+  timezone: string
 }) {
-  const dateRange = getDateRange(range)
+  const dateRange = getDateRange(range, undefined, undefined, timezone)
 
   const [kpis, bookingsOverTime, statusDistribution, eventTypePopularity, eventTypeAnalytics, teamAnalytics, insights, activity] =
     await Promise.all([
       getBookingKPIs(userId, dateRange),
-      getBookingsOverTime(userId, dateRange.start, dateRange.end),
+      getBookingsOverTime(userId, dateRange.start, dateRange.end, timezone),
       getBookingStatusDistribution(userId, dateRange.start, dateRange.end),
       getEventTypePopularity(userId, dateRange.start, dateRange.end),
       getEventTypeAnalytics(userId, dateRange.start, dateRange.end),
       getTeamAnalytics(userId, dateRange.start, dateRange.end),
-      getAvailabilityInsights(userId, dateRange.start, dateRange.end),
+      getAvailabilityInsights(userId, dateRange.start, dateRange.end, timezone),
       getRecentActivity(userId),
     ])
 
@@ -41,11 +43,11 @@ export async function AnalyticsInner({
         <StatusDistributionChart data={statusDistribution} />
         <EventTypePopularityChart data={eventTypePopularity} />
       </div>
-      <EventTypeAnalyticsTable data={eventTypeAnalytics} />
+      <EventTypeAnalyticsTable data={eventTypeAnalytics} timezone={timezone} />
       <TeamAnalyticsSection data={teamAnalytics} />
       <div className="grid gap-4 lg:grid-cols-2">
         <AvailabilityInsights data={insights} />
-        <RecentActivity data={activity} />
+        <RecentActivity data={activity} timezone={timezone} />
       </div>
     </>
   )

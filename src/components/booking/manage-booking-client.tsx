@@ -8,6 +8,9 @@ import {
   VideoIcon,
 } from "lucide-react"
 
+import { formatInTimeZone } from "date-fns-tz"
+import { formatMonthYear } from "@/lib/date"
+
 import { getAvailableSlotsAction } from "@/lib/actions/bookings"
 import {
   cancelBookingByToken,
@@ -49,30 +52,16 @@ interface Slot {
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+function formatDate(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, timeZone, "EEEE, MMMM d, yyyy")
 }
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  })
+function formatTime(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, timeZone, "HH:mm")
 }
 
-function formatTimeShort(iso: string): string {
-  const d = new Date(iso)
-  const h = d.getUTCHours().toString().padStart(2, "0")
-  const m = d.getUTCMinutes().toString().padStart(2, "0")
-  return `${h}:${m}`
+function formatTimeShort(iso: string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), timeZone, "HH:mm")
 }
 
 export function ManageBookingClient({
@@ -126,6 +115,7 @@ export function ManageBookingClient({
         const result = await getAvailableSlotsAction(
           booking.eventType.id,
           date,
+          booking.timezone,
         )
         setError(null)
         if (result.noSlotsReason) {
@@ -154,7 +144,7 @@ export function ManageBookingClient({
         setIsLoadingSlots(false)
       }
     },
-    [booking.eventType.id, booking.startTime, booking.endTime],
+    [booking.eventType.id, booking.startTime, booking.endTime, booking.timezone],
   )
 
   async function handleCancel() {
@@ -258,11 +248,11 @@ export function ManageBookingClient({
           <div className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <CalendarIcon className="size-4 shrink-0" />
-              <span>{formatDate(booking.startTime)}</span>
+              <span>{formatDate(booking.startTime, booking.timezone)}</span>
             </div>
             <div className="flex items-center gap-2">
               <ClockIcon className="size-4 shrink-0" />
-              <span>{formatTime(booking.startTime)} &ndash; {formatTime(booking.endTime)}</span>
+              <span>{formatTime(booking.startTime, booking.timezone)} &ndash; {formatTime(booking.endTime, booking.timezone)}</span>
             </div>
             <div className="flex items-center gap-2">
               <GlobeIcon className="size-4 shrink-0" />
@@ -320,7 +310,7 @@ export function ManageBookingClient({
                   <ChevronLeftIcon className="size-4" />
                 </button>
                 <span className="text-sm font-medium">
-                  {new Date(viewYear, viewMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  {formatMonthYear(viewYear, viewMonth)}
                 </span>
                 <button
                   type="button"
@@ -391,7 +381,7 @@ export function ManageBookingClient({
                             : "border-border bg-transparent text-foreground hover:border-brand/40 hover:text-brand hover:bg-brand-soft",
                         )}
                       >
-                        {formatTimeShort(slot.startTime)}&ndash;{formatTimeShort(slot.endTime)}
+                        {formatTimeShort(slot.startTime, booking.timezone)}&ndash;{formatTimeShort(slot.endTime, booking.timezone)}
                       </button>
                     )
                   })}

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Button } from "@/components/ui/button"
+import { formatDateShort } from "@/lib/date"
 
 interface EventTypeRow {
   id: string
@@ -21,7 +22,7 @@ interface EventTypeRow {
 
 type SortKey = keyof Pick<EventTypeRow, "title" | "totalBookings" | "completionRate" | "cancellationRate" | "avgDuration">
 
-export function EventTypeAnalyticsTable({ data }: { data: EventTypeRow[] }) {
+export function EventTypeAnalyticsTable({ data, timezone }: { data: EventTypeRow[]; timezone: string }) {
   const [sortKey, setSortKey] = useState<SortKey>("totalBookings")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
@@ -131,7 +132,7 @@ export function EventTypeAnalyticsTable({ data }: { data: EventTypeRow[] }) {
                   <td className="px-(--card-spacing) py-3 tabular-nums text-muted-foreground">{row.cancellationRate}%</td>
                   <td className="px-(--card-spacing) py-3 tabular-nums text-muted-foreground">{row.avgDuration} min</td>
                   <td className="px-(--card-spacing) py-3 text-right tabular-nums text-muted-foreground text-xs">
-                    {row.lastBooking ? row.lastBooking.toLocaleDateString() : "\u2014"}
+                    {row.lastBooking ? formatDateShort(row.lastBooking, timezone) : "\u2014"}
                   </td>
                 </tr>
               ))}

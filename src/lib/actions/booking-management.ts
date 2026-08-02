@@ -6,6 +6,7 @@ import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getAvailableSlots } from "@/lib/queries/bookings"
 import { validateBookingCreation } from "@/lib/validation/booking-rules"
+import { resolveTimeZone, toZonedDateStr } from "@/lib/date"
 import {
   createCalendarEvent,
   deleteCalendarEvent,
@@ -143,15 +144,18 @@ export async function rescheduleBookingByToken(
     return { ok: false, error: "past" }
   }
 
-  const ruleCheck = await validateBookingCreation(booking.eventType, newStartTime)
+  const bookingTimeZone = resolveTimeZone(booking.timezone)
+
+  const ruleCheck = await validateBookingCreation(booking.eventType, newStartTime, bookingTimeZone)
   if (ruleCheck) {
     return { ok: false, error: "unavailable" }
   }
 
-  const dateStr = newStartTime.toISOString().split("T")[0]
+  const dateStr = toZonedDateStr(newStartTime, bookingTimeZone)
   const availableSlots = await getAvailableSlots(
     booking.eventTypeId,
     dateStr,
+    bookingTimeZone,
   )
 
   const slotKey = (d: Date) => d.toISOString()

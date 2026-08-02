@@ -2,6 +2,7 @@
 
 import { CreditCardIcon, CalendarIcon, MailIcon, UserIcon, ShieldCheckIcon } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { formatZoned } from "@/lib/date"
 
 interface AccountSectionProps {
   user: {
@@ -9,14 +10,12 @@ interface AccountSectionProps {
     name: string | null
     email: string | null
     createdAt: Date
+    timezone: string
   }
 }
 
 export function AccountSection({ user }: AccountSectionProps) {
-  const memberSince = new Date(user.createdAt).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  })
+  const memberSince = formatZoned(user.createdAt, user.timezone, "MMMM yyyy")
 
   const details = [
     { icon: UserIcon, label: "Name", value: user.name ?? "Not set" },

@@ -9,27 +9,17 @@ import { disconnectGoogleCalendar } from "@/lib/actions/integrations"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { formatRelativeTime } from "@/lib/date"
 import { cn } from "@/lib/utils"
 
 interface GoogleCalendarCardProps {
   connected: boolean
   expiresAt: number | null
   lastSync: Date | null
+  timezone: string
 }
 
-function timeAgo(date: Date): string {
-  const ms = Date.now() - date.getTime()
-  const mins = Math.floor(ms / 60000)
-  if (mins < 1) return "just now"
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return date.toLocaleDateString()
-}
-
-export function GoogleCalendarCard({ connected, expiresAt, lastSync }: GoogleCalendarCardProps) {
+export function GoogleCalendarCard({ connected, expiresAt, lastSync, timezone }: GoogleCalendarCardProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -105,7 +95,7 @@ export function GoogleCalendarCard({ connected, expiresAt, lastSync }: GoogleCal
               <CalendarIcon className="size-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Last sync:</span>
               <span className="font-medium text-foreground">
-                {lastSync ? timeAgo(lastSync) : "Pending"}
+                {lastSync ? formatRelativeTime(lastSync, timezone) : "Pending"}
               </span>
             </span>
           </div>

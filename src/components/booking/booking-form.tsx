@@ -4,10 +4,12 @@ import { useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, ArrowLeftIcon } from "lucide-react"
+import { formatInTimeZone } from "date-fns-tz"
 
 import { createBookingSchema } from "@/lib/schemas/booking"
 import type { CreateBookingInput } from "@/lib/schemas/booking"
 import { createBooking } from "@/lib/actions/bookings"
+import { resolveTimeZone } from "@/lib/date"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,21 +25,12 @@ interface BookingFormProps {
   onBack: () => void
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const h = d.getUTCHours().toString().padStart(2, "0")
-  const m = d.getUTCMinutes().toString().padStart(2, "0")
-  return `${h}:${m}`
+function formatTime(iso: string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), resolveTimeZone(timeZone), "HH:mm")
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+function formatDate(iso: string, timeZone: string): string {
+  return formatInTimeZone(new Date(iso), resolveTimeZone(timeZone), "EEEE, MMMM d, yyyy")
 }
 
 export function BookingForm({
@@ -87,8 +80,8 @@ export function BookingForm({
     })
   }
 
-  const dateLabel = formatDate(selectedSlot.startTime)
-  const timeLabel = `${formatTime(selectedSlot.startTime)} \u2013 ${formatTime(selectedSlot.endTime)}`
+  const dateLabel = formatDate(selectedSlot.startTime, timezone)
+  const timeLabel = `${formatTime(selectedSlot.startTime, timezone)} \u2013 ${formatTime(selectedSlot.endTime, timezone)}`
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">

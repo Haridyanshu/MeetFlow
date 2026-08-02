@@ -7,6 +7,7 @@ import {
   PaletteIcon,
   AlertTriangleIcon,
   CreditCardIcon,
+  GlobeIcon,
 } from "lucide-react"
 
 import { ProfileSection } from "@/components/settings/profile-section"
@@ -14,6 +15,7 @@ import { AccountSection } from "@/components/settings/account-section"
 import { SecuritySection } from "@/components/settings/security-section"
 import { AppearanceSection } from "@/components/settings/appearance-section"
 import { DangerZoneSection } from "@/components/settings/danger-zone-section"
+import { TimezoneSection } from "@/components/settings/timezone-section"
 import { cn } from "@/lib/utils"
 
 interface SettingsClientProps {
@@ -23,12 +25,14 @@ interface SettingsClientProps {
     email: string | null
     image: string | null
     createdAt: Date
+    timezone: string
   }
 }
 
 const sections = [
   { id: "profile", label: "Profile", icon: UserIcon },
   { id: "account", label: "Account", icon: CreditCardIcon },
+  { id: "timezone", label: "Timezone", icon: GlobeIcon },
   { id: "security", label: "Security", icon: ShieldIcon },
   { id: "appearance", label: "Appearance", icon: PaletteIcon },
   { id: "danger-zone", label: "Danger zone", icon: AlertTriangleIcon },
@@ -75,6 +79,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
         <div className="flex-1 min-w-0">
           {activeSection === "profile" && <ProfileSection user={user} />}
           {activeSection === "account" && <AccountSection user={user} />}
+          {activeSection === "timezone" && <TimezoneSection user={user} />}
           {activeSection === "security" && <SecuritySection />}
           {activeSection === "appearance" && <AppearanceSection />}
           {activeSection === "danger-zone" && <DangerZoneSection />}
