@@ -64,4 +64,3 @@ export const updateEventTypeSchema = createEventTypeSchema.partial().extend({
 })
 
 export type CreateEventTypeInput = z.infer<typeof createEventTypeSchema>
-export type UpdateEventTypeInput = z.infer<typeof updateEventTypeSchema>

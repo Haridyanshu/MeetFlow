@@ -63,20 +63,8 @@ export function toZonedDateStr(date: Date, timeZone: string): string {
   return formatZoned(date, timeZone, "yyyy-MM-dd")
 }
 
-export function formatDate(date: Date | string, timeZone: string): string {
-  return formatZoned(date, timeZone, "EEEE, MMMM d, yyyy")
-}
-
-export function formatDateMedium(date: Date | string, timeZone: string): string {
-  return formatZoned(date, timeZone, "EEE, MMM d, yyyy")
-}
-
 export function formatDateShort(date: Date | string, timeZone: string): string {
   return formatZoned(date, timeZone, "MMM d")
-}
-
-export function formatDateTime(date: Date | string, timeZone: string): string {
-  return formatZoned(date, timeZone, "EEE, MMM d, yyyy 'at' HH:mm")
 }
 
 export function formatTime(date: Date | string, timeZone: string): string {
@@ -176,9 +164,4 @@ const MONTH_NAMES = [
 
 export function formatMonthYear(year: number, month: number): string {
   return `${MONTH_NAMES[month]} ${year}`
-}
-
-export function formatWeekdayShort(dayOfWeek: number): string {
-  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-  return names[dayOfWeek] ?? ""
 }

@@ -5,8 +5,6 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import {
   createTeamSchema,
-  inviteMemberSchema,
-  updateTeamSchema,
   createInvitationSchema,
 } from "@/lib/schemas/team"
 
@@ -38,39 +36,6 @@ export async function createTeam(formData: FormData) {
   })
 
   revalidatePath("/dashboard/teams")
-}
-
-export async function inviteMember(teamId: string, formData: FormData) {
-  const session = await auth()
-  if (!session?.user?.id) throw new Error("Unauthorized")
-
-  const team = await prisma.team.findUnique({ where: { id: teamId } })
-  if (!team || team.ownerId !== session.user.id) throw new Error("Forbidden")
-
-  const raw = Object.fromEntries(formData) as Record<string, string>
-  const parsed = inviteMemberSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
-  }
-
-  const invitedUser = await prisma.user.findUnique({ where: { email: parsed.data.email } })
-  if (!invitedUser) {
-    return { errors: { email: ["No user found with this email address."] } }
-  }
-
-  const existingMember = await prisma.teamMember.findUnique({
-    where: { teamId_userId: { teamId, userId: invitedUser.id } },
-  })
-  if (existingMember) {
-    return { errors: { email: ["This user is already a team member."] } }
-  }
-
-  await prisma.teamMember.create({
-    data: { teamId, userId: invitedUser.id, role: "MEMBER" },
-  })
-
-  revalidatePath(`/dashboard/teams/${teamId}`)
-  return { ok: true }
 }
 
 export async function createInvitation(teamId: string, formData: FormData) {
@@ -166,35 +131,6 @@ export async function removeMember(teamId: string, memberId: string) {
   await prisma.teamMember.delete({ where: { id: memberId } })
 
   revalidatePath(`/dashboard/teams/${teamId}`)
-  return { ok: true }
-}
-
-export async function updateTeam(teamId: string, formData: FormData) {
-  const session = await auth()
-  if (!session?.user?.id) throw new Error("Unauthorized")
-
-  const team = await prisma.team.findUnique({ where: { id: teamId } })
-  if (!team || team.ownerId !== session.user.id) throw new Error("Forbidden")
-
-  const raw = Object.fromEntries(formData) as Record<string, string>
-  const parsed = updateTeamSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
-  }
-
-  if (parsed.data.slug && parsed.data.slug !== team.slug) {
-    const existing = await prisma.team.findUnique({
-      where: { ownerId_slug: { ownerId: session.user.id, slug: parsed.data.slug } },
-    })
-    if (existing) {
-      return { errors: { slug: ["This slug is already taken."] } }
-    }
-  }
-
-  await prisma.team.update({ where: { id: teamId }, data: parsed.data })
-
-  revalidatePath(`/dashboard/teams/${teamId}`)
-  revalidatePath("/dashboard/teams")
   return { ok: true }
 }
 

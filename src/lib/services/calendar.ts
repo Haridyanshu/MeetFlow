@@ -143,16 +143,6 @@ export async function updateCalendarEvent({
   endTime?: Date
   timezone?: string
 }) {
-  console.log("[updateCalendarEvent] Starting", {
-    userId,
-    eventId,
-    calendarId,
-    summary,
-    startTime: startTime?.toISOString(),
-    endTime: endTime?.toISOString(),
-    timezone,
-  })
-
   const auth = await getGoogleClient(userId)
   if (!auth) {
     const reason = await (async () => {
@@ -188,17 +178,10 @@ export async function updateCalendarEvent({
   }
 
   try {
-    const response = await calendar.events.patch({
+    await calendar.events.patch({
       calendarId,
       eventId,
       requestBody,
-    })
-    console.log("[updateCalendarEvent] Success", {
-      userId,
-      eventId,
-      status: response.status,
-      updatedStart: response.data.start?.dateTime,
-      updatedEnd: response.data.end?.dateTime,
     })
   } catch (apiError) {
     console.error("[updateCalendarEvent] Google API error", {

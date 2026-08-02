@@ -229,14 +229,6 @@ export async function rescheduleBookingByToken(
         ? [{ userId: booking.assignedUserId, eventId: booking.googleCalendarEventId, calendarId: booking.googleCalendarId ?? "primary" }]
         : [{ userId: booking.userId, eventId: booking.googleCalendarEventId, calendarId: booking.googleCalendarId ?? "primary" }]
 
-    console.log("[rescheduleBookingByToken] Calendar update start", {
-      bookingId: booking.id,
-      assignedUserId: booking.assignedUserId,
-      calendarUsers: calendarUsers.map((c) => ({ userId: c.userId, eventId: c.eventId, calendarId: c.calendarId })),
-      startTime: newStartTime.toISOString(),
-      endTime: newEndTime.toISOString(),
-    })
-
     let meetingUrl: string | null = booking.meetingUrl
 
     for (const cal of calendarUsers) {

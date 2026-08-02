@@ -56,27 +56,3 @@ export async function getTeamById(teamId: string) {
     schedulingTypes: [...new Set(team.eventTypes.map((et) => et.schedulingType))],
   }
 }
-
-export async function getTeamBySlug(ownerId: string, slug: string) {
-  const team = await prisma.team.findUnique({
-    where: { ownerId_slug: { ownerId, slug } },
-    include: {
-      members: { include: { user: { select: { id: true, name: true, email: true, image: true } } } },
-    },
-  })
-  return team
-}
-
-export async function getTeamMembers(teamId: string) {
-  return prisma.teamMember.findMany({
-    where: { teamId },
-    include: { user: { select: { id: true, name: true, email: true, image: true } } },
-  })
-}
-
-export async function getTeamInvitationByToken(token: string) {
-  return prisma.teamInvitation.findUnique({
-    where: { token },
-    include: { team: { select: { id: true, name: true } } },
-  })
-}

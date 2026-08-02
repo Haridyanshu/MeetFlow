@@ -25,15 +25,4 @@ export const cancelBookingSchema = z.object({
   id: z.string().min(1, "Booking ID is required"),
 })
 
-export const availableSlotsRequestSchema = z.object({
-  eventTypeId: z.string().min(1, "Event type is required"),
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format. Use YYYY-MM-DD"),
-})
-
 export type CreateBookingInput = z.infer<typeof createBookingSchema>
-export type CancelBookingInput = z.infer<typeof cancelBookingSchema>
-export type AvailableSlotsRequestInput = z.infer<
-  typeof availableSlotsRequestSchema
->
