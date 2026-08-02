@@ -61,8 +61,6 @@ Create booking links in seconds, let guests pick a time that works in **their** 
 
 ## Screenshots
 
-> These are placeholders. Capture the screenshots described in the [Screenshot Checklist](#screenshot-checklist) and drop them into `public/screenshots/` with the exact filenames below.
-
 | Screenshot | Description |
 | --- | --- |
 | ![Landing](public/screenshots/landing.png) | Marketing landing page (hero, features, pricing, FAQ) |
